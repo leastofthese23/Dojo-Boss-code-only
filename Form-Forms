@@ -1,0 +1,82 @@
+Option Compare Database
+
+Dim dbs As DAO.Database
+Dim rs As DAO.Recordset
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm FormName:="AttendanceTracking"
+End Sub
+Private Sub btnCalendar_Click()
+    Forms("Home").openCalendar
+End Sub
+Private Sub btnClear_Click()
+    Call clearComboBoxes
+End Sub
+
+Private Sub btnClearSignature_Click()
+    Me.signaturePanel.Ink.DeleteStrokes
+    Me.Refresh
+End Sub
+
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnGear_Click()
+    DoCmd.OpenForm FormName:="Settings"
+End Sub
+Private Sub btnHome_Click()
+    DoCmd.OpenForm FormName:="Home"
+End Sub
+
+Private Sub btnInformationRelease_Click()
+    DoCmd.OpenForm FormName:="InformationRelease"
+End Sub
+
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm FormName:="Messaging"
+End Sub
+
+Private Sub btnSaveSignature_Click()
+On Error Resume Next
+    Dim imgBytes() As Byte
+    Dim sFilePathAndName As String
+    
+    imgBytes = Me.signaturePanel.Ink.Save(IPF_GIF)
+    
+    If (UBound(imgBytes) = 0) Then
+        MsgBox ("Please enter your signature")
+    Else
+        sFilePathAndName = (Application.CurrentProject.Path & "\images\system\signatures\" & "signature")
+        Open sFilePathAndName For Binary Access Write As #1
+        Put #1, 1, imgBytes
+        Close #1
+        Me.imgSignature.Picture = sFilePathAndName
+        Me.signaturePanel.Visible = False
+    End If
+
+End Sub
+
+Private Sub btnRankReq_Click()
+    DoCmd.OpenForm FormName:="RankReq"
+End Sub
+
+Private Sub btnSparringPolicy_Click()
+    DoCmd.OpenForm FormName:="SparringPolicy"
+End Sub
+
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm FormName:="Students"
+End Sub
+
+Private Sub btnViewSignedForms_Click()
+    Dim sFolderPath As String
+    sFolderPath = (Application.CurrentProject.Path & "\Signed Forms\")
+    Call Shell("explorer.exe " & sFolderPath, vbNormalFocus)
+End Sub
+
+Private Sub btnWaiverOfLiability_Click()
+    DoCmd.OpenForm FormName:="WaiverOfLiability"
+End Sub
