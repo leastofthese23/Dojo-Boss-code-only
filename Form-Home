@@ -1,0 +1,81 @@
+Option Compare Database
+
+
+
+Private Sub btnCalendar_Click()
+    Call openCalendar
+End Sub
+
+Public Function openCalendar()
+On Error GoTo errHandler
+    FollowHyperlink Forms!Settings!txtCalendarLink.Value
+    
+Exit Function
+errHandler:
+    Dim sError As String
+    Dim sTitle As String
+    Dim sMainMessage As String
+    
+    sError = Err.Description
+    sTitle = "Error"
+
+    If (sError = "Cannot open the specified file.") Then
+        sMainMessage = "There was an issue opening the link to your calendar. Please make sure the link you entered is a valid link. If the issue still persists contact your administrator."
+    ElseIf (sError = "Cannot locate the Internet server or proxy server.") Then
+        sMainMessage = "There was an issue opening the link to your calendar. It looks like you're not connected to the Internet. Please check your connection and try again. If the issue still persists contact your administrator."
+    Else
+        sMainMessage = "An unknown error occurred while trying to open the calendar. Take a screenshot of this and contact your administrator. " & vbCrLf & _
+                        sError
+    End If
+    
+    MsgBox sMainMessage, vbOKOnly, sTitle
+End Function
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm FormName:="AttendanceTracking"
+End Sub
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm FormName:="DojoForms"
+End Sub
+Private Sub btnGear_Click()
+    DoCmd.OpenForm FormName:="Settings"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm FormName:="Messaging"
+End Sub
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm FormName:="Students"
+End Sub
+Private Sub btnTimeInGrade_Click()
+    DoCmd.OpenForm FormName:="Students"
+End Sub
+
+Private Sub btnTimeInRank_Click()
+    DoCmd.OpenForm FormName:="RankReq"
+End Sub
+
+Private Sub Form_Load() 'this function is called only when the application/form initially opens.
+    Call relinkBackendDB
+End Sub
+
+Sub relinkBackendDB() 'this function needs to run to make sure the backend database is linked. Because the application is edited and run on multiple different devices, we need to make sure the file path is correct by getting the relevant file path and assigning it.
+    Dim sFilePath As String
+    Dim connectionString As String
+    Dim tbl As TableDef
+    Dim db As Database
+    
+    sFilePath = (Application.CurrentProject.Path & "\system\Dojo Boss Database.accdb")
+    connectionString = ("MS Access;PWD=admin;DATABASE=" & sFilePath) 'fake password used for github
+    Set db = CurrentDb
+
+    For Each tbl In db.TableDefs
+        If Len(tbl.Connect) > 0 Then 'we are only going to relink linked tables.
+            'MsgBox tbl.Connect 'uncomment to see connection string
+            tbl.Connect = connectionString
+            tbl.RefreshLink
+        End If
+    Next
+End Sub
