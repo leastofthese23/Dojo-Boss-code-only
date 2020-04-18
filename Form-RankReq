@@ -1,0 +1,37 @@
+Option Compare Database
+
+Dim dbs As DAO.Database
+Dim rs As DAO.Recordset
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm FormName:="AttendanceTracking"
+End Sub
+Private Sub btnCalendar_Click()
+    Forms("Home").openCalendar
+End Sub
+Private Sub btnClear_Click()
+    Call clearComboBoxes
+End Sub
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnGear_Click()
+    DoCmd.OpenForm FormName:="Settings"
+End Sub
+Private Sub btnHome_Click()
+    DoCmd.OpenForm FormName:="Home"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm FormName:="Messaging"
+End Sub
+
+Private Sub btnRankReq_Click()
+    DoCmd.OpenForm FormName:="RankReq"
+End Sub
+
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm FormName:="Students"
+End Sub
