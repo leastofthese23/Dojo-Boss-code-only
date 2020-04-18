@@ -1,0 +1,3810 @@
+Option Compare Database
+
+Dim sRelativeFilePath, sFullFilePath, sHyperLink, sSelectedCert, sFilePathAndName, sSQL, sCertNumber, sMostRecentKarateCert, sCN, sRank, sMostRecentKobudoCert, _
+    sMostRecentTuiteCert, sDiscipline As String
+
+Dim iStudentID As Integer
+
+Dim boolFileProvided, boolCertNumberProvided As Boolean
+
+Dim dbs As DAO.Database
+Dim rs As DAO.Recordset
+
+Private Sub black1Karate_Click()
+    sSelectedCert = "black1Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm FormName:="AttendanceTracking"
+End Sub
+
+Private Sub btnBack_Click()
+    DoCmd.OpenForm FormName:="StudentDetails"
+End Sub
+
+Private Sub btnCalendar_Click()
+    FollowHyperlink "http://ekkc-nw.com/class-calendar/"
+End Sub
+Private Sub btnClear_Click()
+    Call clearComboBoxes
+End Sub
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm FormName:="Financials"
+End Sub
+Private Sub btnGear_Click()
+    DoCmd.OpenForm FormName:="Gear"
+End Sub
+Private Sub btnHome_Click()
+    DoCmd.OpenForm FormName:="Home"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm FormName:="Messaging"
+End Sub
+
+Private Sub btnRefresh_Click()
+    Call refreshForm
+End Sub
+
+Function refreshForm()
+    'MsgBox "now in refreshForm function"
+    Me.Refresh
+    sStudentName = Me.comboSelectedStudent.Column(1) 'this works when a value is manually selected from the combo box.
+    If (sStudentName = "") Or IsNull(sStudentName) Then 'this is needed for when the student name value was inserted from the calling form, rather than selected manually by the user.
+        sStudentName = Me.comboSelectedStudent.Value
+        If (sStudentName = "") Or IsNull(sStudentName) Then
+            sStudentName = Me.lblStudentName.Caption 'sometimes previous methods do not work.
+        End If
+    End If
+    
+    Me.lblStudentName.Caption = sStudentName
+    Call setStudentPicture 'takes the variable sStudentName, sets the image on this form
+    
+    'GET MOST RECENTS
+    Call getStudentIDFromLabel 'sets the variables (sStudentName, iStudentID). connects to DB.
+    Call getMostRecentKarateCert 'takes the variable iStudentID, sets the variables (sMostRecentKarateCert, sCN). sMostRecentKarateCert will contain the relevant file path.
+    'MsgBox ("now in refreshForm(). sMostRecentKarateCert = '" & sMostRecentKarateCert & "'")
+    Call displayMostRecentKarate 'takes the variables (sMostRecentKarateCert, sCN, sRank). sMostRecentKarateCert must contain the relevant file path.
+    Call getMostRecentKobudoCert 'takes the variable iStudentID, sets the variables (sMostRecentKobudoCert, sCN)
+    Call displayMostRecentKobudo 'takes the variables (sMostRecentKobudoCert, sCN, sRank). sMostRecentKobudoCert must contain the relavant file path.
+    Call getMostRecentTuiteCert 'takes the variable iStudentID, sets the variables (sMostRecentTuiteCert, sCN)
+    Call displayMostRecentTuite 'takes the variables (sMostRecentTuiteCert, sCN, sRank)
+    Call getMostRecentInstructorCert 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sCN, sDiscipline)
+    Call displayMostRecentInstructor
+    
+    'get all of the student certs. Display them as list items.
+    Call getAndSetListOfCerts 'takes the variable iStudentID.
+    
+    'if the user clicks on either a thumbnail or a text link, the image should open up in the default application.
+End Function
+
+
+Function getAndSetListOfCerts() 'takes the variable iStudentID.
+    Call getAndSet10KyuKarate 'takes the variable iStudentID.
+    Call getAndSet9KyuKarate
+    
+    Call getAndSet10KyuKobudo 'takes the variable iStudentID.
+    Call getAndSet9KyuKobudo
+    
+    Call getAndSet10KyuTuite 'takes the variable iStudentID.
+    Call getAndSet9KyuTuite
+End Function
+
+
+
+
+Function getAndSet9KyuTuite() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[9KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 9KyuTuite in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt9KyuTuite.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt9KyuTuite.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[9KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt9KyuTuite.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt9KyuTuite.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt9KyuTuite.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+Function getAndSet10KyuTuite() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[10KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 10KyuTuite in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt10KyuTuite.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt10KyuTuite.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[10KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt10KyuTuite.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt10KyuTuite.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt10KyuTuite.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+
+
+Function getAndSet9KyuKobudo() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[9KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 9KyuKobudo in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt9KyuKobudo.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt9KyuKobudo.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[9KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt9KyuKobudo.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt9KyuKobudo.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt9KyuKobudo.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+Function getAndSet10KyuKobudo() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[10KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 10KyuKobudo in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt10KyuKobudo.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt10KyuKobudo.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[10KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt10KyuKobudo.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt10KyuKobudo.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt10KyuKobudo.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+
+
+
+
+Function getAndSet9KyuKarate() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[9KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 9KyuKarate in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt9KyuKarate.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt9KyuKarate.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[9KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt9KyuKarate.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt9KyuKarate.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt9KyuKarate.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+Function getAndSet10KyuKarate() 'takes the variable iStudentID.
+'On Error Resume Next
+    sSQL = ("SELECT c.[10KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    'see if there is a cert (file path varialbe) for 10KyuKarate in the DB table
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then 'NOTE: this will always be greater than 0. SQL will return a null value.
+        rs.MoveFirst
+        sFileName = ""
+        sFileName = rs.Fields(0)
+        If IsNull(sFileName) Or (sFileName = "") Then 'if no file name exists in the DB table
+            Me.txt10KyuKarate.Value = "+ add +"
+        Else 'file path exists in table
+            Me.txt10KyuKarate.ControlTipText = (Application.CurrentProject.Path & "\certs\" & sFileName)
+            'if there is a cert, see if cert CN exists also
+            sSQL = ("SELECT c.[10KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+            If rs.RecordCount > 0 Then
+                rs.MoveFirst
+                sCN = ""
+                sCN = rs.Fields(0)
+                If (sCN = "") Or IsNull(sCN) Then
+                    sCN = "view"
+                End If
+                Me.txt10KyuKarate.Value = sCN 'text box will show cert# or "view"
+            Else
+                Me.txt10KyuKarate.Value = "view" 'text box will show "view"
+            End If
+        End If
+    Else
+        Me.txt10KyuKarate.Value = "+ add +" 'if no cert was found, text box will say "+ add +"
+    End If
+End Function
+
+
+
+
+
+
+
+
+Function displayMostRecentInstructor() 'takes the variables (sMostRecentInstructorCert, sCN, sDiscipline). sMostRecentInstructorCert must contain the relevant file path.
+On Error GoTo errorHand
+    Me.lblMostRecentInstructor.Caption = sDiscipline
+    If IsNull(sCN) Then sCN = ""
+    Me.lblMostRecentInstructorCN.Caption = sCN
+    If (sMostRecentInstructorCert = "") Then
+        sMostRecentInstructorCert = (Application.CurrentProject.Path & "\certs\blank.bmp")
+    End If
+    Me.imgMostRecentInstructor.Picture = (sMostRecentInstructorCert)
+    
+errorHand:
+    If (Err = 0) Then
+        'do nothing
+    ElseIf (Err = 2220) Then
+        MsgBox ("error 2220" & vbCrLf & vbCrLf & _
+                "Cannot locate file for most recent instructor cert" & vbCrLf & _
+                sRank & vbCrLf & _
+                "The file may have been moved or renamed. Make sure that the file is located in the Dojo Boss\certs folder." & vbCrLf & vbCrLf & _
+                "Press OK to locate the file.")
+        Call openFileDialog
+    Else
+        'Me.imgMostRecentInstructor.Picture = (Application.CurrentProject.Path & "\certs\blank.bmp")
+        MsgBox ("error " & Err & ": " & Err.Description)
+    End If
+End Function
+
+Function displayMostRecentTuite() 'takes the variables (sMostRecentTuiteCert, sCN, sRank). sMostRecentTuiteCert must contain the relavant file path.
+On Error GoTo errorHand
+    Me.lblMostRecentTuite.Caption = sRank
+    If IsNull(sCN) Then sCN = ""
+    Me.lblMostRecentTuiteCN.Caption = sCN
+    'MsgBox ("now in displayMostRecentTuite(). sMostRecentTuiteCert = '" & sMostRecentTuiteCert & "'")
+    If (sMostRecentTuiteCert = "") Then
+        sMostRecentTuiteCert = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+    End If
+    Me.imgMostRecentTuite.Picture = (sMostRecentTuiteCert)
+    
+errorHand:
+    If (Err = 0) Then
+        'do nothing
+    ElseIf (Err = 2220) Then
+        MsgBox ("error 2220" & vbCrLf & vbCrLf & _
+                "Cannot locate file for most recent tuite cert" & vbCrLf & _
+                sRank & vbCrLf & _
+                "The file may have been moved or renamed. Make sure that the file is located in the Dojo Boss\certs folder." & vbCrLf & vbCrLf & _
+                "Press OK to locate the file.")
+        Call openFileDialog
+    Else
+        'Me.imgMostRecentTuite.Picture = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+        MsgBox ("error " & Err & ": " & Err.Description)
+    End If
+
+End Function
+
+Function displayMostRecentKobudo() 'takes the variables (sMostRecentKobudoCert, sCN, sRank). sMostRecentKobudoCert must contain the relavant file path.
+On Error GoTo errorHand
+    Me.lblMostRecentKobudo.Caption = sRank
+    If IsNull(sCN) Then sCN = ""
+    Me.lblMostRecentKobudoCN.Caption = sCN
+    If (sMostRecentKobudoCert = "") Then
+        sMostRecentKobudoCert = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+    End If
+    Me.imgMostRecentKobudo.Picture = (sMostRecentKobudoCert)
+    
+errorHand:
+    If (Err = 0) Then
+        'do nothing
+    ElseIf (Err = 2220) Then
+        MsgBox ("error 2220" & vbCrLf & vbCrLf & _
+                "Cannot locate file for most recent kobudo cert" & vbCrLf & _
+                sRank & vbCrLf & _
+                "The file may have been moved or renamed. Make sure that the file is located in the Dojo Boss\certs folder." & vbCrLf & vbCrLf & _
+                "Press OK to locate the file.")
+        Call openFileDialog
+    Else
+        'Me.imgMostRecentKobudo.Picture = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+        MsgBox ("error " & Err & ": " & Err.Description)
+    End If
+
+End Function
+
+Function displayMostRecentKarate() 'takes the variables (sMostRecentKarateCert, sCN, sRank). sMostRecentKarateCert must contain the relevant file path.
+On Error GoTo errorHand
+    'MsgBox ("now in displayMostRecentKarate(). sMostRecentKarateCert = '" & sMostRecentKarateCert & "'")
+    Me.lblMostRecentKarate.Caption = sRank
+    If IsNull(sCN) Then sCN = ""
+    Me.lblMostRecentKarateCN.Caption = sCN
+    
+    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+        sMostRecentKarateCert = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+    End If
+    Me.imgMostRecentKarate.Picture = (sMostRecentKarateCert)
+    
+errorHand:
+    If (Err = 0) Then
+        'do nothing
+    ElseIf (Err = 2220) Then
+        MsgBox ("error 2220" & vbCrLf & vbCrLf & _
+                "Cannot locate file for most recent karate cert" & vbCrLf & _
+                sRank & vbCrLf & _
+                "The file may have been moved or renamed. Make sure that the file is located in the Dojo Boss\certs folder." & vbCrLf & vbCrLf & _
+                "Press OK to locate the file.")
+        Call openFileDialog
+    Else
+        MsgBox ("error " & Err & ": " & Err.Description)
+        'Me.imgMostRecentkarate.Picture = (Application.CurrentProject.Path & "\certs\preview not available.bmp")
+    End If
+
+End Function
+
+
+Function getMostRecentInstructorCert() 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sCN, sDiscipline)
+    
+    
+    Call checkForTuiteInstructor 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sDiscipline)
+    If (sMostRecentInstructorCert = "") Or IsNull(sMostRecentInstructorCert) Then
+        Call checkForKobudoInstructor
+        If (sMostRecentInstructorCert = "") Or IsNull(sMostRecentInstructorCert) Then
+            Call checkForKarateInstructor
+            If (sMostRecentInstructorCert = "") Or IsNull(sMostRecentInstructorCert) Then
+                sMostRecentInstructorCert = ""
+                sDiscipline = ""
+                sCN = ""
+            Else
+                Call getKarateInstructorCN
+            End If
+        Else
+            Call getKobudoInstructorCN
+        End If
+    Else
+        Call getTuiteInstructorCN 'takes the variable iStudentID, sets the variable sCN
+    End If
+    
+    If (sMostRecentInstructorCert = "") Then
+        'do nothing
+    Else
+        sMostRecentInstructorCert = (Application.CurrentProject.Path & "\certs\" & sMostRecentInstructorCert)
+    End If
+    
+End Function
+
+Function getMostRecentTuiteCert() 'takes the variable iStudentID, sets the variables (sMostRecentTuiteCert, sCN, sRank)
+On Error Resume Next
+    'we need to go through each Tuite cert and find the highest one. Start from the highest possible, then work down. As soon as a non-null value is encountered,
+    'that would be the most recent one; the function exits.
+    'after that, get the corresponding cert #.
+
+    Call checkForKudanTuite 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+    If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+        Call checkForHachidanTuite 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+        If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+            Call checkForShichidanTuite 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+            If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                Call checkForRokudanTuite
+                If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                    Call checkForGodanTuite
+                    If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                        Call checkForYandanTuite
+                        If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                            Call checkForSandanTuite
+                            If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                Call checkForNidanTuite
+                                If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                    Call checkForShodanTuite
+                                    If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                        Call checkFor1KyuTuite
+                                        If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                            Call checkFor2KyuTuite
+                                            If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                Call checkFor3KyuTuite
+                                                If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                    Call checkFor4KyuTuite
+                                                    If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                        Call checkFor5KyuTuite
+                                                        If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                            Call checkFor6KyuTuite
+                                                            If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                                Call checkFor7KyuTuite
+                                                                If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                                    Call checkFor8KyuTuite
+                                                                    If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                                        Call checkFor9KyuTuite
+                                                                        If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                                            Call checkFor10KyuTuite
+                                                                            If (sMostRecentTuiteCert = "") Or IsNull(sMostRecentTuiteCert) Then
+                                                                                sMostRecentTuiteCert = "" 'no karate certs have been added yet.
+                                                                                sRank = ""
+                                                                                sCN = ""
+                                                                            Else
+                                                                                Call get10KyuTuiteCN
+                                                                            End If
+                                                                        Else
+                                                                            Call get9KyuTuiteCN
+                                                                        End If
+                                                                    Else
+                                                                        Call get8KyuTuiteCN
+                                                                    End If
+                                                                Else
+                                                                    Call get7KyuTuiteCN
+                                                                End If
+                                                            Else
+                                                                Call get6KyuTuiteCN
+                                                            End If
+                                                        Else
+                                                            Call get5KyuTuiteCN
+                                                        End If
+                                                    Else
+                                                        Call get4KyuTuiteCN
+                                                    End If
+                                                Else
+                                                    Call get3KyuTuiteCN
+                                                End If
+                                            Else
+                                                Call get2KyuTuiteCN
+                                            End If
+                                        Else
+                                            Call get1KyuTuiteCN
+                                        End If
+                                    Else
+                                        Call getShodanTuiteCN
+                                    End If
+                                Else
+                                    Call getNidanTuiteCN
+                                End If
+                            Else
+                                Call getSandanTuiteCN
+                            End If
+                        Else
+                            Call getYandanTuiteCN
+                        End If
+                    Else
+                        Call getGodanTuiteCN
+                    End If
+                Else
+                    Call getRokudanTuiteCN
+                End If
+            Else
+                Call getShichidanTuiteCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+            End If
+        Else
+            Call getHachidanTuiteCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+        End If
+    Else
+        Call GetKudanTuiteCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    End If
+    
+    If (sMostRecentTuiteCert = "") Then
+        'do nothing
+    Else
+        sMostRecentTuiteCert = (Application.CurrentProject.Path & "\certs\" & sMostRecentTuiteCert)
+    End If
+    
+End Function
+
+Function getMostRecentKobudoCert() 'takes the variable iStudentID, sets the variables (sMostRecentKobudoCert, sCN, sRank)
+On Error Resume Next
+    'we need to go through each kobudo cert and find the highest one. Start from the highest possible, then work down. As soon as a non-null value is encountered,
+    'that would be the most recent one; the function exits.
+    'after that, get the corresponding cert #.
+
+    Call checkForKudanKobudo 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+    If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+        Call checkForHachidanKobudo 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+        If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+            Call checkForShichidanKobudo 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+            If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                Call checkForRokudanKobudo
+                If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                    Call checkForGodanKobudo
+                    If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                        Call checkForYandanKobudo
+                        If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                            Call checkForSandanKobudo
+                            If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                Call checkForNidanKobudo
+                                If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                    Call checkForShodanKobudo
+                                    If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                        Call checkFor1KyuKobudo
+                                        If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                            Call checkFor2KyuKobudo
+                                            If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                Call checkFor3KyuKobudo
+                                                If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                    Call checkFor4KyuKobudo
+                                                    If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                        Call checkFor5KyuKobudo
+                                                        If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                            Call checkFor6KyuKobudo
+                                                            If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                                Call checkFor7KyuKobudo
+                                                                If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                                    Call checkFor8KyuKobudo
+                                                                    If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                                        Call checkFor9KyuKobudo
+                                                                        If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                                            Call checkFor10KyuKobudo
+                                                                            If (sMostRecentKobudoCert = "") Or IsNull(sMostRecentKobudoCert) Then
+                                                                                sMostRecentKobudoCert = "" 'no karate certs have been added yet.
+                                                                                sRank = ""
+                                                                                sCN = ""
+                                                                            Else
+                                                                                Call get10KyuKobudoCN
+                                                                            End If
+                                                                        Else
+                                                                            Call get9KyuKobudoCN
+                                                                        End If
+                                                                    Else
+                                                                        Call get8KyuKobudoCN
+                                                                    End If
+                                                                Else
+                                                                    Call get7KyuKobudoCN
+                                                                End If
+                                                            Else
+                                                                Call get6KyuKobudoCN
+                                                            End If
+                                                        Else
+                                                            Call get5KyuKobudoCN
+                                                        End If
+                                                    Else
+                                                        Call get4KyuKobudoCN
+                                                    End If
+                                                Else
+                                                    Call get3KyuKobudoCN
+                                                End If
+                                            Else
+                                                Call get2KyuKobudoCN
+                                            End If
+                                        Else
+                                            Call get1KyuKobudoCN
+                                        End If
+                                    Else
+                                        Call getShodanKobudoCN
+                                    End If
+                                Else
+                                    Call getNidanKobudoCN
+                                End If
+                            Else
+                                Call getSandanKobudoCN
+                            End If
+                        Else
+                            Call getYandanKobudoCN
+                        End If
+                    Else
+                        Call getGodanKobudoCN
+                    End If
+                Else
+                    Call getRokudanKobudoCN
+                End If
+            Else
+                Call getShichidanKobudoCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+            End If
+        Else
+            Call getHachidanKobudoCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+        End If
+    Else
+        Call GetKudanKobudoCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    End If
+    
+    If (sMostRecentKobudoCert = "") Then
+        'do nothing
+    Else
+        sMostRecentKobudoCert = (Application.CurrentProject.Path & "\certs\" & sMostRecentKobudoCert)
+    End If
+    
+    'MsgBox ("most recent cert is: " & sMostRecentKobudoCert)
+End Function
+
+Function getMostRecentKarateCert() 'takes the variable iStudentID, sets the variables (sMostRecentKarateCert, sCN, sRank)
+On Error Resume Next
+    'we need to go through each karate cert and find the highest one. Start from the highest possible, then work down. As soon as a non-null value is encountered,
+    'that would be the most recent one; the function exits.
+    'after that, get the corresponding cert #.
+
+    Call checkForKudan 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+        Call checkForHachidan 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+        If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+            Call checkForShichidan 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+            If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                Call checkForRokudan
+                If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                    Call checkForGodan
+                    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                        Call checkForYandan
+                        If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                            Call checkForSandan
+                            If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                Call checkForNidan
+                                If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                    Call checkForShodan
+                                    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                        Call checkFor1Kyu
+                                        If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                            Call checkFor2Kyu
+                                            If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                Call checkFor3Kyu
+                                                If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                    Call checkFor4Kyu
+                                                    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                        Call checkFor5Kyu
+                                                        If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                            Call checkFor6Kyu
+                                                            If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                                Call checkFor7Kyu
+                                                                If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                                    Call checkFor8Kyu
+                                                                    If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                                        Call checkFor9Kyu
+                                                                        If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                                            Call checkFor10Kyu
+                                                                            If (sMostRecentKarateCert = "") Or IsNull(sMostRecentKarateCert) Then
+                                                                                sMostRecentKarateCert = "" 'no karate certs have been added yet.
+                                                                                sCN = ""
+                                                                            Else
+                                                                                Call get10KyuCN
+                                                                            End If
+                                                                        Else
+                                                                            Call get9KyuCN
+                                                                        End If
+                                                                    Else
+                                                                        Call get8KyuCN
+                                                                    End If
+                                                                Else
+                                                                    Call get7KyuCN
+                                                                End If
+                                                            Else
+                                                                Call get6KyuCN
+                                                            End If
+                                                        Else
+                                                            Call get5KyuCN
+                                                        End If
+                                                    Else
+                                                        Call get4KyuCN
+                                                    End If
+                                                Else
+                                                    Call get3KyuCN
+                                                End If
+                                            Else
+                                                Call get2KyuCN
+                                            End If
+                                        Else
+                                            Call get1KyuCN
+                                        End If
+                                    Else
+                                        Call getShodanCN
+                                    End If
+                                Else
+                                    Call getNidanCN
+                                End If
+                            Else
+                                Call getSandanCN
+                            End If
+                        Else
+                            Call getYandanCN
+                        End If
+                    Else
+                        Call getGodanCN
+                    End If
+                Else
+                    Call getRokudanCN
+                End If
+            Else
+                Call getShichidanCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+            End If
+        Else
+            Call getHachidanCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+        End If
+    Else
+        Call GetKudanCN 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    End If
+    
+    If (sMostRecentKarateCert = "") Then
+        'do nothing
+    Else
+        sMostRecentKarateCert = (Application.CurrentProject.Path & "\certs\" & sMostRecentKarateCert)
+    End If
+    
+    'MsgBox ("most recent cert is: " & sMostRecentKarateCert)
+End Function
+
+
+
+
+
+Function checkForKarateInstructor() 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sDiscipline)
+    sSQL = ("SELECT c.[KarateInstructor] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentInstructorCert = rs.Fields(0)
+        sDiscipline = "Kobudo Instructor"
+    Else
+        sMostRecentInstructorCert = ""
+        sDiscipline = ""
+    End If
+End Function
+Function checkForKobudoInstructor() 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sDiscipline)
+    sSQL = ("SELECT c.[KobudoInstructor] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentInstructorCert = rs.Fields(0)
+        sDiscipline = "Kobudo Instructor"
+    Else
+        sMostRecentInstructorCert = ""
+        sDiscipline = ""
+    End If
+End Function
+Function checkForTuiteInstructor() 'takes the variable iStudentID, sets the variables (sMostRecentInstructorCert, sDiscipline)
+    sSQL = ("SELECT c.[TuiteInstructor] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentInstructorCert = rs.Fields(0)
+        sDiscipline = "Tuite Instructor"
+    Else
+        sMostRecentInstructorCert = ""
+        sDiscipline = ""
+    End If
+End Function
+
+
+
+
+Function checkForKudanTuite() 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+    sSQL = ("SELECT c.[black9Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForHachidanTuite() 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+    sSQL = ("SELECT c.[black8Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForShichidanTuite() 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+    sSQL = ("SELECT c.[black7Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForRokudanTuite() 'takes the variable iStudentID, sets the variable sMostRecentTuiteCert
+    sSQL = ("SELECT c.[black6Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForGodanTuite()
+    sSQL = ("SELECT c.[black5Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForYandanTuite()
+    sSQL = ("SELECT c.[black4Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForSandanTuite()
+    sSQL = ("SELECT c.[black3Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForNidanTuite()
+    sSQL = ("SELECT c.[black2Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkForShodanTuite()
+    sSQL = ("SELECT c.[black1Tuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor1KyuTuite()
+    sSQL = ("SELECT c.[1KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor2KyuTuite()
+    sSQL = ("SELECT c.[2KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor3KyuTuite()
+    sSQL = ("SELECT c.[3KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor4KyuTuite()
+    sSQL = ("SELECT c.[4KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor5KyuTuite()
+    sSQL = ("SELECT c.[5KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor6KyuTuite()
+    sSQL = ("SELECT c.[6KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor7KyuTuite()
+    sSQL = ("SELECT c.[7KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor8KyuTuite()
+    sSQL = ("SELECT c.[8KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor9KyuTuite()
+    sSQL = ("SELECT c.[9KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+Function checkFor10KyuTuite()
+    sSQL = ("SELECT c.[10KyuTuite] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentTuiteCert = rs.Fields(0)
+    Else
+        sMostRecentTuiteCert = ""
+    End If
+End Function
+
+
+
+
+
+Function checkForKudanKobudo() 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+    sSQL = ("SELECT c.[KudanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForHachidanKobudo() 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+    sSQL = ("SELECT c.[HachidanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForShichidanKobudo() 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+    sSQL = ("SELECT c.[ShichidanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForRokudanKobudo() 'takes the variable iStudentID, sets the variable sMostRecentKobudoCert
+    sSQL = ("SELECT c.[RokudanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForGodanKobudo()
+    sSQL = ("SELECT c.[GodanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForYandanKobudo()
+    sSQL = ("SELECT c.[YandanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForSandanKobudo()
+    sSQL = ("SELECT c.[SandanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForNidanKobudo()
+    sSQL = ("SELECT c.[NidanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkForShodanKobudo()
+    sSQL = ("SELECT c.[ShodanKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor1KyuKobudo()
+    sSQL = ("SELECT c.[1KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor2KyuKobudo()
+    sSQL = ("SELECT c.[2KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor3KyuKobudo()
+    sSQL = ("SELECT c.[3KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor4KyuKobudo()
+    sSQL = ("SELECT c.[4KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor5KyuKobudo()
+    sSQL = ("SELECT c.[5KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor6KyuKobudo()
+    sSQL = ("SELECT c.[6KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor7KyuKobudo()
+    sSQL = ("SELECT c.[7KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor8KyuKobudo()
+    sSQL = ("SELECT c.[8KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor9KyuKobudo()
+    sSQL = ("SELECT c.[9KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+Function checkFor10KyuKobudo()
+    sSQL = ("SELECT c.[10KyuKobudoOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKobudoCert = rs.Fields(0)
+    Else
+        sMostRecentKobudoCert = ""
+    End If
+End Function
+
+
+
+
+
+
+
+Function checkForKudan() 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+    sSQL = ("SELECT c.[KudanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForHachidan() 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+    sSQL = ("SELECT c.[HachidanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForShichidan() 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+    sSQL = ("SELECT c.[ShichidanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForRokudan() 'takes the variable iStudentID, sets the variable sMostRecentKarateCert
+    sSQL = ("SELECT c.[RokudanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForGodan()
+    sSQL = ("SELECT c.[GodanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForYandan()
+    sSQL = ("SELECT c.[YandanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForSandan()
+    sSQL = ("SELECT c.[SandanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForNidan()
+    sSQL = ("SELECT c.[NidanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkForShodan()
+    sSQL = ("SELECT c.[ShodanKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor1Kyu()
+    sSQL = ("SELECT c.[1KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor2Kyu()
+    sSQL = ("SELECT c.[2KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor3Kyu()
+    sSQL = ("SELECT c.[3KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor4Kyu()
+    sSQL = ("SELECT c.[4KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor5Kyu()
+    sSQL = ("SELECT c.[5KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor6Kyu()
+    sSQL = ("SELECT c.[6KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor7Kyu()
+    sSQL = ("SELECT c.[7KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor8Kyu()
+    sSQL = ("SELECT c.[8KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor9Kyu()
+    sSQL = ("SELECT c.[9KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+Function checkFor10Kyu()
+    sSQL = ("SELECT c.[10KyuKarateOkinawa] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sMostRecentKarateCert = rs.Fields(0)
+    Else
+        sMostRecentKarateCert = ""
+    End If
+End Function
+
+
+
+
+
+
+Function getKarateInstructorCN()  'takes the variable iStudentID, sets the variable sCN
+    sSQL = ("SELECT c.[karateInstructorCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+    Else
+        sCN = ""
+    End If
+End Function
+Function getKobudoInstructorCN() 'takes the variable iStudentID, sets the variable sCN
+    sSQL = ("SELECT c.[kobudoInstructorCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+    Else
+        sCN = ""
+    End If
+End Function
+Function getTuiteInstructorCN() 'takes the variable iStudentID, sets the variable sCN
+    sSQL = ("SELECT c.[tuiteInstructorCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+    Else
+        sCN = ""
+    End If
+End Function
+
+
+
+
+
+
+Function GetKudanTuiteCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black9TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Kudan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+
+Function getHachidanTuiteCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black8TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Hachidan - Black VIII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShichidanTuiteCN()
+    sSQL = ("SELECT c.[black7TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shichidan - Black VII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getRokudanTuiteCN()
+    sSQL = ("SELECT c.[black6TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Rokudan - Black VI"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getGodanTuiteCN()
+    sSQL = ("SELECT c.[black5TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Godan - Black V"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getYandanTuiteCN()
+    sSQL = ("SELECT c.[black4TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Yandan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getSandanTuiteCN()
+    sSQL = ("SELECT c.[black3TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Sandan - Black III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getNidanTuiteCN()
+    sSQL = ("SELECT c.[black2TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Nidan - Black II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShodanTuiteCN()
+    sSQL = ("SELECT c.[black1TuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shodan - Black I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get1KyuTuiteCN()
+    sSQL = ("SELECT c.[1KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "1st Kyu - Brown III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get2KyuTuiteCN()
+    sSQL = ("SELECT c.[2KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "2nd Kyu - Brown II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get3KyuTuiteCN()
+    sSQL = ("SELECT c.[3KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "3rd Kyu - Brown I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get4KyuTuiteCN()
+    sSQL = ("SELECT c.[4KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "4th Kyu - Green III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get5KyuTuiteCN()
+    sSQL = ("SELECT c.[5KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "5th Kyu - Green II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get6KyuTuiteCN()
+    sSQL = ("SELECT c.[6KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "6th Kyu - Green I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get7KyuTuiteCN()
+    sSQL = ("SELECT c.[7KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "7th Kyu - Blue III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get8KyuTuiteCN()
+    sSQL = ("SELECT c.[8KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "8th Kyu - Blue II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get9KyuTuiteCN()
+    sSQL = ("SELECT c.[9KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "9th Kyu - Blue I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get10KyuTuiteCN()
+    sSQL = ("SELECT c.[10KyuTuiteCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "10th Kyu - White"
+    Else
+        sCN = ""
+    End If
+End Function
+
+
+
+
+
+Function GetKudanKobudoCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black9KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Kudan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+
+Function getHachidanKobudoCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black8KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Hachidan - Black VIII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShichidanKobudoCN()
+    sSQL = ("SELECT c.[black7KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shichidan - Black VII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getRokudanKobudoCN()
+    sSQL = ("SELECT c.[black6KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Rokudan - Black VI"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getGodanKobudoCN()
+    sSQL = ("SELECT c.[black5KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Godan - Black V"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getYandanKobudoCN()
+    sSQL = ("SELECT c.[black4KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Yandan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getSandanKobudoCN()
+    sSQL = ("SELECT c.[black3KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Sandan - Black III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getNidanKobudoCN()
+    sSQL = ("SELECT c.[black2KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Nidan - Black II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShodanKobudoCN()
+    sSQL = ("SELECT c.[black1KobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shodan - Black I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get1KyuKobudoCN()
+    sSQL = ("SELECT c.[1KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "1st Kyu - Brown III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get2KyuKobudoCN()
+    sSQL = ("SELECT c.[2KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "2nd Kyu - Brown II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get3KyuKobudoCN()
+    sSQL = ("SELECT c.[3KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "3rd Kyu - Brown I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get4KyuKobudoCN()
+    sSQL = ("SELECT c.[4KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "4th Kyu - Green III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get5KyuKobudoCN()
+    sSQL = ("SELECT c.[5KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "5th Kyu - Green II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get6KyuKobudoCN()
+    sSQL = ("SELECT c.[6KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "6th Kyu - Green I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get7KyuKobudoCN()
+    sSQL = ("SELECT c.[7KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "7th Kyu - Blue III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get8KyuKobudoCN()
+    sSQL = ("SELECT c.[8KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "8th Kyu - Blue II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get9KyuKobudoCN()
+    sSQL = ("SELECT c.[9KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "9th Kyu - Blue I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get10KyuKobudoCN()
+    sSQL = ("SELECT c.[10KyuKobudoCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "10th Kyu - White"
+    Else
+        sCN = ""
+    End If
+End Function
+
+
+
+
+Function GetKudanCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black9KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Kudan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+
+Function getHachidanCN() 'takes the variable iStudentID, sets the variables (sCN, sRank)
+    sSQL = ("SELECT c.[black8KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Hachidan - Black VIII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShichidanCN()
+    sSQL = ("SELECT c.[black7KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shichidan - Black VII"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getRokudanCN()
+    sSQL = ("SELECT c.[black6KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Rokudan - Black VI"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getGodanCN()
+    sSQL = ("SELECT c.[black5KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Godan - Black V"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getYandanCN()
+    sSQL = ("SELECT c.[black4KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Yandan - Black IV"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getSandanCN()
+    sSQL = ("SELECT c.[black3KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Sandan - Black III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getNidanCN()
+    sSQL = ("SELECT c.[black2KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Nidan - Black II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function getShodanCN()
+    sSQL = ("SELECT c.[black1KarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "Shodan - Black I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get1KyuCN()
+    sSQL = ("SELECT c.[1KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "1st Kyu - Brown III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get2KyuCN()
+    sSQL = ("SELECT c.[2KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "2nd Kyu - Brown II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get3KyuCN()
+    sSQL = ("SELECT c.[3KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "3rd Kyu - Brown I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get4KyuCN()
+    sSQL = ("SELECT c.[4KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "4th Kyu - Green III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get5KyuCN()
+    sSQL = ("SELECT c.[5KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "5th Kyu - Green II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get6KyuCN()
+    sSQL = ("SELECT c.[6KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "6th Kyu - Green I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get7KyuCN()
+    sSQL = ("SELECT c.[7KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "7th Kyu - Blue III"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get8KyuCN()
+    sSQL = ("SELECT c.[8KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "8th Kyu - Blue II"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get9KyuCN()
+    sSQL = ("SELECT c.[9KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "9th Kyu - Blue I"
+    Else
+        sCN = ""
+    End If
+End Function
+Function get10KyuCN()
+    sSQL = ("SELECT c.[10KyuKarateCN] FROM Certs as c WHERE c.[studentID] = " & iStudentID)
+            
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        sCN = rs.Fields(0)
+        sRank = "10th Kyu - White"
+    Else
+        sCN = ""
+    End If
+End Function
+
+
+
+
+
+
+
+
+Function setStudentPicture()
+    'MsgBox "now in the function 'setStudentPicture'"
+    sStudentName = Me.lblStudentName.Caption
+    Set dbs = CurrentDb
+    sSQL = "SELECT s.[picture] FROM Students AS s WHERE s.[studentName] = '" & sStudentName & "';"
+    'MsgBox ("sSQL = " & sSQL)
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        sRelativeFilePath = rs.Fields(0)
+        sFullFilePath = (Application.CurrentProject.Path & "\images\" & sRelativeFilePath)
+    Else
+        sFullFilePath = (Application.CurrentProject.Path & "\images\" & "blank profile pic.bmp")
+    End If
+    
+    Me.imgStudent.Picture = sFullFilePath
+End Function
+
+Private Sub btnRefresh_GotFocus()
+    Call refreshForm
+End Sub
+
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm FormName:="Students"
+End Sub
+
+Private Sub comboSelectedStudent_Click()
+    Call refreshForm
+End Sub
+
+Private Sub Form_Activate()
+    'Call refreshForm
+    'MsgBox ("certs form just got the focus. Name in the combo box is: '" & Me.comboSelectedStudent.Value & "'")
+End Sub
+
+Private Sub imgEdit10KyuKarate_Click()
+    sSelectedCert = "txt10KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit10KyuKobudo_Click()
+    sSelectedCert = "txt10KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit10KyuTuite_Click()
+    sSelectedCert = "txt10KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit1KyuKarate_Click()
+    sSelectedCert = "txt1KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit1KyuKobudo_Click()
+    sSelectedCert = "txt1KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit1KyuTuite_Click()
+    sSelectedCert = "txt1KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit2KyuKarate_Click()
+    sSelectedCert = "txt2KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit2KyuKobudo_Click()
+    sSelectedCert = "txt2KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit2KyuTuite_Click()
+    sSelectedCert = "txt2KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit3KyuKarate_Click()
+    sSelectedCert = "txt3KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit3KyuKobudo_Click()
+    sSelectedCert = "txt3KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit3KyuTuite_Click()
+    sSelectedCert = "txt3KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit4KyuKarate_Click()
+    sSelectedCert = "txt4KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit4KyuKobudo_Click()
+    sSelectedCert = "txt4KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit4KyuTuite_Click()
+    sSelectedCert = "txt4KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit5KyuKarate_Click()
+    sSelectedCert = "txt5KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit5KyuKobudo_Click()
+    sSelectedCert = "txt5KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit5KyuTuite_Click()
+    sSelectedCert = "txt5KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit6KyuKarate_Click()
+    sSelectedCert = "txt6KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit6KyuKobudo_Click()
+    sSelectedCert = "txt6KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit6KyuTuite_Click()
+    sSelectedCert = "txt6KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit7KyuKarate_Click()
+    sSelectedCert = "txt7KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit7KyuKobudo_Click()
+    sSelectedCert = "txt7KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit7KyuTuite_Click()
+    sSelectedCert = "txt7KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit8KyuKarate_Click()
+    sSelectedCert = "txt8KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit8KyuKobudo_Click()
+    sSelectedCert = "txt8KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit8KyuTuite_Click()
+    sSelectedCert = "txt8KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit9KyuKarate_Click()
+    sSelectedCert = "txt9KyuKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit9KyuKobudo_Click()
+    sSelectedCert = "txt9KyuKobudo"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEdit9KyuTuite_Click()
+    sSelectedCert = "txt9KyuTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack1Karate_Click()
+    sSelectedCert = "txtBlack1Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack1Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack1"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack1Tuite_Click()
+    sSelectedCert = "txtBlack1Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack2Karate_Click()
+    sSelectedCert = "txtBlack2Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack2Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack2"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack2Tuite_Click()
+    sSelectedCert = "txtBlack2Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack3Karate_Click()
+    sSelectedCert = "txtBlack3Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack3Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack3"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack3Tuite_Click()
+    sSelectedCert = "txtBlack3Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack4Karate_Click()
+    sSelectedCert = "txtBlack4Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack4Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack4"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack4Tuite_Click()
+    sSelectedCert = "txtBlack4Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack5Karate_Click()
+    sSelectedCert = "txtBlack5Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack5Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack5"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack5Tuite_Click()
+    sSelectedCert = "txtBlack5Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack6Karate_Click()
+    sSelectedCert = "txtBlack6Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack6Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack6"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack6Tuite_Click()
+    sSelectedCert = "txtBlack6Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack7Karate_Click()
+    sSelectedCert = "txtBlack7Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack7Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack7"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack7Tuite_Click()
+    sSelectedCert = "txtBlack7Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack8Karate_Click()
+    sSelectedCert = "txtBlack8Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack8Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack8"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack8Tuite_Click()
+    sSelectedCert = "txtBlack8Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack9Karate_Click()
+    sSelectedCert = "txtBlack9Karate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack9Kobudo_Click()
+    sSelectedCert = "txtKobudoBlack9"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditBlack9Tuite_Click()
+    sSelectedCert = "txtBlack9Tuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditInstructorKarate_Click()
+    sSelectedCert = "txtInstructorKarate"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditInstructorKobudo_Click()
+    sSelectedCert = "txtKobudoInstructor"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgEditInstructorTuite_Click()
+    sSelectedCert = "txtInstructorTuite"
+    Call openFileDialog
+    If (boolFileProvided = True) Then Call changeAddToView
+End Sub
+
+Private Sub imgMostRecentInstructor_Click()
+    sSelectedCert = "imgMostRecentInstructor"
+    sHyperLink = Me.imgMostRecentInstructor.Picture
+    If InStr(sHyperLink, "certs") Then
+        'do nothing, we're good.
+    Else: sHyperLink = (Application.CurrentProject.Path & "\certs\" & sHyperLink) 'add in the relative file path
+    End If
+    
+    Call openCertFile 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+End Sub
+
+Private Sub imgMostRecentKarate_Click()
+    sSelectedCert = "imgMostRecentKarate"
+    sHyperLink = Me.imgMostRecentKarate.Picture
+    If InStr(sHyperLink, "certs") Then
+        'do nothing, we're good.
+    Else: sHyperLink = (Application.CurrentProject.Path & "\certs\" & sHyperLink) 'add in the relative file path
+    End If
+    
+    Call openCertFile 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+End Sub
+
+Private Sub txt1KyuKarateLocal_Click()
+    'check to see if link is set
+    sSelectedCert = "txt1KyuKarateLocal"
+    Call seeIfLinkIsSet
+    'if link is set, follow link
+    If (boolFileProvided = True) Then
+        Call openCertFile 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+    Else
+        Call openFileDialog
+    End If
+    'if link is not set, open file dialog box
+    'get file from user
+    'save file in certs folder
+    
+    'sCertLink = "C:\Users\Israel\Google Drive\Dojo Boss\certs\1 kyu cert Israel - EKKC.pdf"
+    
+End Sub
+
+Function openFileDialog() 'Sets the variables (boolFileProvided, sRelativeFilePath)
+    Dim varFile As Variant
+    Dim fDialog As Object
+    Set fDialog = Application.FileDialog(3)
+    boolCertNumberProvided = False
+    
+    With fDialog
+        AllowMultiSelect = False
+    
+        If fDialog.Show = True Then
+            For Each varFile In .SelectedItems
+                sFilePathAndName = varFile
+                sSpaceSeperatedFilePath = ""
+                sSpaceSeperatedFilePath = Replace(sFilePathAndName, "\", " ")
+
+                If InStr(sSpaceSeperatedFilePath, "certs") Then
+                    
+                    'get relative image path
+                    indexOfCerts = InStr(1, sFilePathAndName, "certs")
+                    sRelativeFilePath = Right(sFilePathAndName, Len(sFilePathAndName) - indexOfCerts - 5)
+                    Call setHyperlink 'takes the variables (sSelectedCert, sRelativeFilePath)
+                    boolFileProvided = True
+                    Call askForCertNumber 'takes the variable sSelectedCert, sets the variables (sCertNumber, boolCertNumberProvided)
+                    If (boolCertNumberProvided = True) Then
+                        Call addCertNumberToDB 'takes the variables (sSelectedCert, sCertNumber)
+                    End If
+                Else
+                    boolFileProvided = False
+                    MsgBox ("You must upload/select a file from the CERTS FOLDER (PDF suggested format). Files selected/uploaded from other folders will not be saved")
+                    Call openFileDialog
+                End If
+            Next
+        Else: boolFileProvided = False
+        End If
+    End With
+End Function
+
+Function addCertNumberToDB() 'takes the variables (sSelectedCert, sCertNumber)
+    MsgBox ("sSelectedCert = " & sSelectedCert)
+    If (sSelectedCert = "txt10KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 10KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 9KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 8KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 7KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 6KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 5KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 4KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 3KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 2KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 1KyuKarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black1Karate") Then
+        sSQL = ("UPDATE Certs SET black1KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black2Karate") Then
+        sSQL = ("UPDATE Certs SET black2KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black3Karate") Then
+        sSQL = ("UPDATE Certs SET black3KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black4Karate") Then
+        sSQL = ("UPDATE Certs SET black4KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black5Karate") Then
+        sSQL = ("UPDATE Certs SET black5KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black6Karate") Then
+        sSQL = ("UPDATE Certs SET black6KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black7Karate") Then
+        sSQL = ("UPDATE Certs SET black7KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black8Karate") Then
+        sSQL = ("UPDATE Certs SET black8KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black9Karate") Then
+        sSQL = ("UPDATE Certs SET black9KarateCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorKarate") Then
+        sSQL = ("UPDATE Certs SET karateInstructorCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+        'KOBUDO
+    ElseIf (sSelectedCert = "txt10KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 10KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 9KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 8KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 7KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 6KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 5KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 4KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 3KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 2KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 1KyuKobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack1") Then
+        sSQL = ("UPDATE Certs SET black1KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack2") Then
+        sSQL = ("UPDATE Certs SET black2KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack3") Then
+        sSQL = ("UPDATE Certs SET black3KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack4") Then
+        sSQL = ("UPDATE Certs SET black4KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack5") Then
+        sSQL = ("UPDATE Certs SET black5KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack6") Then
+        sSQL = ("UPDATE Certs SET black6KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack7") Then
+        sSQL = ("UPDATE Certs SET black7KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack8") Then
+        sSQL = ("UPDATE Certs SET black8KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack9") Then
+        sSQL = ("UPDATE Certs SET black9KobudoCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoInstructor") Then
+        sSQL = ("UPDATE Certs SET kobudoInstructorCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+        'TUITE
+    ElseIf (sSelectedCert = "txt10KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 10KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 9KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 8KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 7KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 6KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 5KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 4KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 3KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 2KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 1KyuTuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack1Tuite") Then
+        sSQL = ("UPDATE Certs SET black1TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack2Tuite") Then
+        sSQL = ("UPDATE Certs SET black2TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack3Tuite") Then
+        sSQL = ("UPDATE Certs SET black3TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack4Tuite") Then
+        sSQL = ("UPDATE Certs SET black4TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack5Tuite") Then
+        sSQL = ("UPDATE Certs SET black5TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack6Tuite") Then
+        sSQL = ("UPDATE Certs SET black6TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack7Tuite") Then
+        sSQL = ("UPDATE Certs SET black7TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack8Tuite") Then
+        sSQL = ("UPDATE Certs SET black8TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack9Tuite") Then
+        sSQL = ("UPDATE Certs SET black9TuiteCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorTuite") Then
+        sSQL = ("UPDATE Certs SET tuiteInstructorCN = '" & sCertNumber & "' WHERE Certs.[studentID] = " & iStudentID)
+    End If
+    
+    MsgBox ("sSQL = " & sSQL)
+    DoCmd.RunSQL sSQL
+End Function
+
+Function askForCertNumber() 'takes the variable sSelectedCert, sets the variables (sCertNumber, boolCertNumberProvided)
+    Dim sMessageToUser, sTitle As String
+    
+    sMessageToUser = "enter the certificate number"
+    sTitle = "Cert #"
+    sCertNumber = InputBox(sMessageToUser, sTitle)
+    If (sCertNumber = "") Or (sCertNumber = " ") Or IsNull(sCertNumber) Then
+        boolCertNumberProvided = False
+    Else
+        boolCertNumberProvided = True
+    End If
+End Function
+
+Function setHyperlink() 'takes the variables (sSelectedCert, sRelativeFilePath)
+    Call getStudentIDFromLabel 'sets the variables (sStudentName, iStudentID). connects to DB.
+    sSQL = ""
+    If (sSelectedCert = "txt10KyuKarate") Then
+        Me.txt10KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 10KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKarate") Then
+        Me.txt9KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 9KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKarate") Then
+        Me.txt8KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 8KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKarate") Then
+        Me.txt7KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 7KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKarate") Then
+        Me.txt6KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 6KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKarate") Then
+        Me.txt5KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 5KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKarate") Then
+        Me.txt4KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 4KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKarate") Then
+        Me.txt3KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 3KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKarate") Then
+        Me.txt2KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 2KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKarate") Then
+        Me.txt1KyuKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 1KyuKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black1Karate") Then
+        Me.txtBlack1Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET ShodanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black2Karate") Then
+        Me.txtBlack2Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET NidanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black3Karate") Then
+        Me.txtBlack3Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET SandanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black4Karate") Then
+        Me.txtBlack4Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET YandanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black5Karate") Then
+        Me.txtBlack5Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET GodanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black6Karate") Then
+        Me.txtBlack6Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET RokudanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black7Karate") Then
+        Me.txtBlack7Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET ShichidanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black8Karate") Then
+        Me.txtBlack8Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET HachidanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "black9Karate") Then
+        Me.txtBlack9Karate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET KudanKarateOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorKarate") Then
+        Me.txtInstructorKarate.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET KarateInstructor = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+        'KOBUDO
+    ElseIf (sSelectedCert = "txt10KyuKobudo") Then
+        Me.txt10KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 10KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKobudo") Then
+        Me.txt9KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET Certs.[9KyuKobudoOkinawa] = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKobudo") Then
+        Me.txt8KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 8KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKobudo") Then
+        Me.txt7KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 7KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKobudo") Then
+        Me.txt6KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 6KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKobudo") Then
+        Me.txt5KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 5KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKobudo") Then
+        Me.txt4KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 4KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKobudo") Then
+        Me.txt3KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 3KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKobudo") Then
+        Me.txt2KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 2KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKobudo") Then
+        Me.txt1KyuKobudo.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 1KyuKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack1") Then
+        Me.txtKobudoBlack1.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET ShodanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack2") Then
+        Me.txtKobudoBlack2.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET NidanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack3") Then
+        Me.txtKobudoBlack3.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET SandanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack4") Then
+        Me.txtKobudoBlack4.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET YandanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack5") Then
+        Me.txtKobudoBlack5.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET GodanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack6") Then
+        Me.txtKobudoBlack6.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET RokudanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack7") Then
+        Me.txtKobudoBlack7.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET ShichidanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack8") Then
+        Me.txtKobudoBlack8.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET HachidanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack9") Then
+        Me.txtKobudoBlack9.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET KudanKobudoOkinawa = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoInstructor") Then
+        Me.txtKobudoInstructor.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET KobudoInstructor = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+        'TUITE
+    ElseIf (sSelectedCert = "txt10KyuTuite") Then
+        Me.txt10KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 10KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuTuite") Then
+        Me.txt9KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 9KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuTuite") Then
+        Me.txt8KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 8KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuTuite") Then
+        Me.txt7KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 7KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuTuite") Then
+        Me.txt6KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 6KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuTuite") Then
+        Me.txt5KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 5KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuTuite") Then
+        Me.txt4KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 4KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuTuite") Then
+        Me.txt3KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 3KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuTuite") Then
+        Me.txt2KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 2KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuTuite") Then
+        Me.txt1KyuTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET 1KyuTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack1Tuite") Then
+        Me.txtBlack1Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET shodanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack2Tuite") Then
+        Me.txtBlack2Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET nidanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack3Tuite") Then
+        Me.txtBlack3Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET sandanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack4Tuite") Then
+        Me.txtBlack1Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET yandanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack5Tuite") Then
+        Me.txtBlack5Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET godanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack6Tuite") Then
+        Me.txtBlack6Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET rokudanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack7Tuite") Then
+        Me.txtBlack7Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET shichidanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack8Tuite") Then
+        Me.txtBlack8Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET hachidanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack9Tuite") Then
+        Me.txtBlack9Tuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET kudanTuite = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorTuite") Then
+        Me.txtInstructorTuite.ControlTipText = sRelativeFilePath
+        sSQL = ("UPDATE Certs SET TuiteInstructor = '" & sRelativeFilePath & "' WHERE Certs.[studentID] = " & iStudentID)
+    End If
+    
+    'MsgBox ("now in setHyperlink() function. sSQL = " & sSQL)
+    If (sSQL = "") Then
+        'do nothing. just for image preview.
+    Else
+        DoCmd.RunSQL sSQL
+    End If
+End Function
+
+Function getStudentIDFromLabel() 'sets the variables (sStudentName, iStudentID)
+    Call connectToDB
+    sStudentName = Me.lblStudentName.Caption
+    sSQL = ("SELECT s.[studentID] FROM Students AS s WHERE s.[studentName] = '" & sStudentName & "';")
+    
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        iStudentID = rs.Fields(0)
+    Else
+        iStudentID = 0
+    End If
+
+End Function
+
+
+Function connectToDB()
+    Set dbs = CurrentDb
+End Function
+
+
+Function seeIfLinkIsSet() 'takes the variable sSelectedCert, sets the variables (sHyperLink, boolFileProvided)
+    sHyperLink = ""
+    If (sSelectedCert = "txt10KyuKarate") Then
+        sHyperLink = Me.txt10KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt9KyuKarate") Then
+        sHyperLink = Me.txt9KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt8KyuKarate") Then
+        sHyperLink = Me.txt8KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt7KyuKarate") Then
+        sHyperLink = Me.txt7KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt6KyuKarate") Then
+        sHyperLink = Me.txt6KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt5KyuKarate") Then
+        sHyperLink = Me.txt5KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt4KyuKarate") Then
+        sHyperLink = Me.txt4KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt3KyuKarate") Then
+        sHyperLink = Me.txt3KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt2KyuKarate") Then
+        sHyperLink = Me.txt2KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "txt1KyuKarate") Then
+        sHyperLink = Me.txt1KyuKarate.ControlTipText
+    ElseIf (sSelectedCert = "black1Karate") Then
+        sHyperLink = Me.txtBlack1Karate.ControlTipText
+    ElseIf (sSelectedCert = "black2Karate") Then
+        sHyperLink = Me.txtBlack2Karate.ControlTipText
+    ElseIf (sSelectedCert = "black3Karate") Then
+        sHyperLink = Me.txtBlack3Karate.ControlTipText
+    ElseIf (sSelectedCert = "black4Karate") Then
+        sHyperLink = Me.txtBlack4Karate.ControlTipText
+    ElseIf (sSelectedCert = "black5Karate") Then
+        sHyperLink = Me.txtBlack5Karate.ControlTipText
+    ElseIf (sSelectedCert = "black6Karate") Then
+        sHyperLink = Me.txtBlack6Karate.ControlTipText
+    ElseIf (sSelectedCert = "black7Karate") Then
+        sHyperLink = Me.txtBlack7Karate.ControlTipText
+    ElseIf (sSelectedCert = "black8Karate") Then
+        sHyperLink = Me.txtBlack8Karate.ControlTipText
+    ElseIf (sSelectedCert = "black9Karate") Then
+        sHyperLink = Me.txtBlack9Karate.ControlTipText
+    ElseIf (sSelectedCert = "txtInstructorKarate") Then
+        sHyperLink = Me.txtInstructorKarate.ControlTipText
+        'KOBUDO
+    ElseIf (sSelectedCert = "txt10KyuKobudo") Then
+        sHyperLink = Me.txt10KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt9KyuKobudo") Then
+        sHyperLink = Me.txt9KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt8KyuKobudo") Then
+        sHyperLink = Me.txt8KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt7KyuKobudo") Then
+        sHyperLink = Me.txt7KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt6KyuKobudo") Then
+        sHyperLink = Me.txt6KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt5KyuKobudo") Then
+        sHyperLink = Me.txt5KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt4KyuKobudo") Then
+        sHyperLink = Me.txt4KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt3KyuKobudo") Then
+        sHyperLink = Me.txt3KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt2KyuKobudo") Then
+        sHyperLink = Me.txt2KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txt1KyuKobudo") Then
+        sHyperLink = Me.txt1KyuKobudo.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack1") Then
+        sHyperLink = Me.txtKobudoBlack1.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack2") Then
+        sHyperLink = Me.txtKobudoBlack2.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack3") Then
+        sHyperLink = Me.txtKobudoBlack3.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack4") Then
+        sHyperLink = Me.txtKobudoBlack4.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack5") Then
+        sHyperLink = Me.txtKobudoBlack5.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack6") Then
+        sHyperLink = Me.txtKobudoBlack6.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack7") Then
+        sHyperLink = Me.txtKobudoBlack7.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack8") Then
+        sHyperLink = Me.txtKobudoBlack8.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoBlack9") Then
+        sHyperLink = Me.txtKobudoBlack9.ControlTipText
+    ElseIf (sSelectedCert = "txtKobudoInstructor") Then
+        sHyperLink = Me.txtKobudoInstructor.ControlTipText
+        'TUITE
+    ElseIf (sSelectedCert = "txt10KyuTuite") Then
+        sHyperLink = Me.txt10KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt9KyuTuite") Then
+        sHyperLink = Me.txt9KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt8KyuTuite") Then
+        sHyperLink = Me.txt8KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt7KyuTuite") Then
+        sHyperLink = Me.txt7KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt6KyuTuite") Then
+        sHyperLink = Me.txt6KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt5KyuTuite") Then
+        sHyperLink = Me.txt5KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt4KyuTuite") Then
+        sHyperLink = Me.txt4KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt3KyuTuite") Then
+        sHyperLink = Me.txt3KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt2KyuTuite") Then
+        sHyperLink = Me.txt2KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txt1KyuTuite") Then
+        sHyperLink = Me.txt1KyuTuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack1Tuite") Then
+        sHyperLink = Me.txtBlack1Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack2Tuite") Then
+        sHyperLink = Me.txtBlack2Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack3Tuite") Then
+        sHyperLink = Me.txtBlack3Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack4Tuite") Then
+        sHyperLink = Me.txtBlack4Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack5Tuite") Then
+        sHyperLink = Me.txtBlack5Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack6Tuite") Then
+        sHyperLink = Me.txtBlack6Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack7Tuite") Then
+        sHyperLink = Me.txtBlack7Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack8Tuite") Then
+        sHyperLink = Me.txtBlack8Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtBlack9Tuite") Then
+        sHyperLink = Me.txtBlack9Tuite.ControlTipText
+    ElseIf (sSelectedCert = "txtInstructorTuite") Then
+        sHyperLink = Me.txtInstructorTuite.ControlTipText
+    End If
+    
+    If (sHyperLink = "") Then
+        boolFileProvided = False
+    Else
+        boolFileProvided = True
+    End If
+
+End Function
+
+Private Function openCertFile() 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+On Error GoTo errHandler
+    If InStr(sHyperLink, "cert") Then
+        'do nothing, we're good
+    Else
+        sHyperLink = (Application.CurrentProject.Path & "\certs\" & sHyperLink)
+    End If
+    'MsgBox ("sHyperLink = " & sHyperLink)
+    FollowHyperlink (sHyperLink)
+    
+errHandler:
+    If (Err = 0) Then
+        'do nothing
+    ElseIf (Err = 409) Then
+        MsgBox ("File missing. Please add the file to the Dojo Boss\certs folder. ") 'missing file, file not found
+        Call clearHyperlinksForSelectedCert 'takes the variables (sHyperLink, sSelectedCert)
+        Call openFileDialog
+    Else
+        MsgBox ("error " & Err & ": " & Err.Description)
+    End If
+End Function
+
+Function clearHyperlinksForSelectedCert() 'takes the variables (sHyperLink, sSelectedCert, iStudentID)
+On Error Resume Next
+    sSQL = ""
+    If (sSelectedCert = "txt10KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 10KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 9KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 8KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 7KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 6KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 5KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 4KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 3KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 2KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKarate") Then
+        sSQL = ("UPDATE Certs SET 1KyuKarateLocal = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack1Karate") Then
+        sSQL = ("UPDATE Certs SET ShodanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack2Karate") Then
+        sSQL = ("UPDATE Certs SET NidanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack3Karate") Then
+        sSQL = ("UPDATE Certs SET SandanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack4Karate") Then
+        sSQL = ("UPDATE Certs SET YandanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack5Karate") Then
+        sSQL = ("UPDATE Certs SET GodanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack6Karate") Then
+        sSQL = ("UPDATE Certs SET RokudanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack7Karate") Then
+        sSQL = ("UPDATE Certs SET ShichidanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack8Karate") Then
+        sSQL = ("UPDATE Certs SET HachidanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack9Karate") Then
+        sSQL = ("UPDATE Certs SET KudanKarateOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorKarate") Then
+        sSQL = ("UPDATE Certs SET KarateInstructor = '' WHERE Certs.[studentID] = " & iStudentID)
+        'KOBUDO
+    ElseIf (sSelectedCert = "txt10KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 10KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 9KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 8KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 7KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 6KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 5KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 4KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 3KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 2KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuKobudo") Then
+        sSQL = ("UPDATE Certs SET 1KyuKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack1") Then
+        sSQL = ("UPDATE Certs SET ShodanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack2") Then
+        sSQL = ("UPDATE Certs SET NidanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack3") Then
+        sSQL = ("UPDATE Certs SET SandanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack4") Then
+        sSQL = ("UPDATE Certs SET YandanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack5") Then
+        sSQL = ("UPDATE Certs SET GodanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack6") Then
+        sSQL = ("UPDATE Certs SET RokudanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack7") Then
+        sSQL = ("UPDATE Certs SET ShichidanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack8") Then
+        sSQL = ("UPDATE Certs SET HachidanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoBlack9") Then
+        sSQL = ("UPDATE Certs SET KudanKobudoOkinawa = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtKobudoInstructor") Then
+        sSQL = ("UPDATE Certs SET KobudoInstructor = '' WHERE Certs.[studentID] = " & iStudentID)
+        'TUITE
+    ElseIf (sSelectedCert = "txt10KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 10KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt9KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 9KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt8KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 8KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt7KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 7KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt6KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 6KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt5KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 5KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt4KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 4KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt3KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 3KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt2KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 2KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txt1KyuTuite") Then
+        sSQL = ("UPDATE Certs SET 1KyuTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack1Tuite") Then
+        sSQL = ("UPDATE Certs SET shodanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack2Tuite") Then
+        sSQL = ("UPDATE Certs SET nidanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack3Tuite") Then
+        sSQL = ("UPDATE Certs SET sandanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack4Tuite") Then
+        sSQL = ("UPDATE Certs SET yandanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack5Tuite") Then
+        sSQL = ("UPDATE Certs SET godanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack6Tuite") Then
+        sSQL = ("UPDATE Certs SET rokudanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack7Tuite") Then
+        sSQL = ("UPDATE Certs SET shichidanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack8Tuite") Then
+        sSQL = ("UPDATE Certs SET hachidanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtBlack9Tuite") Then
+        sSQL = ("UPDATE Certs SET kudanTuite = '' WHERE Certs.[studentID] = " & iStudentID)
+    ElseIf (sSelectedCert = "txtInstructorTuite") Then
+        sSQL = ("UPDATE Certs SET TuiteInstructor = '' WHERE Certs.[studentID] = " & iStudentID)
+    End If
+    'MsgBox (sSQL)
+    If (sSQL = "") Then
+        'do nothing. Image preview was clicked.
+    Else
+        DoCmd.RunSQL sSQL
+    End If
+End Function
+
+Private Sub imgMostRecentKobudo_Click()
+    sSelectedCert = "imgMostRecentKobudo"
+    sHyperLink = Me.imgMostRecentKobudo.Picture
+    If InStr(sHyperLink, "certs") Then
+        'do nothing, we're good.
+    Else: sHyperLink = (Application.CurrentProject.Path & "\certs\" & sHyperLink) 'add in the relative file path
+    End If
+    
+    Call openCertFile 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+End Sub
+
+Private Sub imgMostRecentTuite_Click()
+    sSelectedCert = "imgMostRecentTuite"
+    sHyperLink = Me.imgMostRecentTuite.Picture
+    If InStr(sHyperLink, "certs") Then
+        'do nothing, we're good.
+    Else: sHyperLink = (Application.CurrentProject.Path & "\certs\" & sHyperLink) 'add in the relative file path
+    End If
+    
+    Call openCertFile 'takes the variable sHyperLink. sHyperLink must include the relevant file path.
+End Sub
+
+Private Sub txt10KyuKarate_Click()
+    sSelectedCert = "txt10KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt10KyuKobudo_Click()
+    sSelectedCert = "txt10KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Function openFile() 'takes the variable sSelectedCert
+    Call seeIfLinkIsSet 'takes the variable sSelectedCert, sets the variables (sHyperLink, boolFileProvided)
+    If (boolFileProvided = True) Then
+        Call openCertFile 'opens the file if one has already been linked. takes the variable sHyperLink (must contain relevant file path).
+    Else
+        Call openFileDialog 'get file from user 'save link in table and on form. Sets the variable boolFileProvided
+        If (boolFileProvided = True) Then Call changeAddToView 'takes the variables (sSelectedCert, boolCertNumberProvided, sCertNumber) changes the text from "+ add +" to "view" or cert# when applicable
+    End If
+End Function
+
+Function changeAddToView() 'takes the variables (sSelectedCert, boolCertNumberProvided, sCertNumber) changes the text from "+ add +" to "view" or cert# when applicable
+    'MsgBox ("now in changeAddToView(). boolFileProvided = '" & boolFileProvided & "' . boolCertNumberProvided = '" & boolCertNumberProvided & "'. sCertNumber = '" & sCertNumber & "'. ")
+    If (sSelectedCert = "txt10KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt10KyuKarate.Value = sCertNumber Else Me.txt10KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt9KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt9KyuKarate.Value = sCertNumber Else Me.txt9KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt8KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt8KyuKarate.Value = sCertNumber Else Me.txt8KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt7KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt7KyuKarate.Value = sCertNumber Else Me.txt7KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt6KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt6KyuKarate.Value = sCertNumber Else Me.txt7KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt5KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt5KyuKarate.Value = sCertNumber Else Me.txt6KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt4KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt4KyuKarate.Value = sCertNumber Else Me.txt5KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt3KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt3KyuKarate.Value = sCertNumber Else Me.txt4KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt2KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt2KyuKarate.Value = sCertNumber Else Me.txt3KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "txt1KyuKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txt1KyuKarate.Value = sCertNumber Else Me.txt2KyuKarate.Value = "view"
+    ElseIf (sSelectedCert = "black1Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack1Karate.Value = sCertNumber Else Me.txtBlack1Karate.Value = "view"
+    ElseIf (sSelectedCert = "black2Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack2Karate.Value = sCertNumber Else Me.txtBlack2Karate.Value = "view"
+    ElseIf (sSelectedCert = "black3Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack3Karate.Value = sCertNumber Else Me.txtBlack3Karate.Value = "view"
+    ElseIf (sSelectedCert = "black4Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack4Karate.Value = sCertNumber Else Me.txtBlack4Karate.Value = "view"
+    ElseIf (sSelectedCert = "black5Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack5Karate.Value = sCertNumber Else Me.txtBlack5Karate.Value = "view"
+    ElseIf (sSelectedCert = "black6Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack6Karate.Value = sCertNumber Else Me.txtBlack6Karate.Value = "view"
+    ElseIf (sSelectedCert = "black7Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack7Karate.Value = sCertNumber Else Me.txtBlack7Karate.Value = "view"
+    ElseIf (sSelectedCert = "black8Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack8Karate.Value = sCertNumber Else Me.txtBlack8Karate.Value = "view"
+    ElseIf (sSelectedCert = "black9Karate") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack9Karate.Value = sCertNumber Else Me.txtBlack9Karate.Value = "view"
+    ElseIf (sSelectedCert = "txtInstructorKarate") Then
+        If (boolCertNumberProvided = True) Then Me.txtInstructorKarate.Value = sCertNumber Else Me.txtInstructorKarate.Value = "view"
+        'KOBUDO
+    ElseIf (sSelectedCert = "txt10KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt10KyuKobudo.Value = sCertNumber Else Me.txt10KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt9KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt9KyuKobudo.Value = sCertNumber Else Me.txt9KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt8KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt8KyuKobudo.Value = sCertNumber Else Me.txt8KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt7KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt7KyuKobudo.Value = sCertNumber Else Me.txt7KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt6KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt6KyuKobudo.Value = sCertNumber Else Me.txt6KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt5KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt5KyuKobudo.Value = sCertNumber Else Me.txt5KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt4KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt4KyuKobudo.Value = sCertNumber Else Me.txt4KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt3KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt3KyuKobudo.Value = sCertNumber Else Me.txt3KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt2KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt2KyuKobudo.Value = sCertNumber Else Me.txt2KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txt1KyuKobudo") Then
+        If (boolCertNumberProvided = True) Then Me.txt1KyuKobudo.Value = sCertNumber Else Me.txt1KyuKobudo.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack1") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack1.Value = sCertNumber Else Me.txtKobudoBlack1.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack2") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack2.Value = sCertNumber Else Me.txtKobudoBlack2.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack3") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack3.Value = sCertNumber Else Me.txtKobudoBlack3.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack4") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack4.Value = sCertNumber Else Me.txtKobudoBlack4.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack5") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack5.Value = sCertNumber Else Me.txtKobudoBlack5.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack6") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack6.Value = sCertNumber Else Me.txtKobudoBlack6.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack7") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack7.Value = sCertNumber Else Me.txtKobudoBlack7.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack8") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack8.Value = sCertNumber Else Me.txtKobudoBlack8.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoBlack9") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoBlack9.Value = sCertNumber Else Me.txtKobudoBlack9.Value = "view"
+    ElseIf (sSelectedCert = "txtKobudoInstructor") Then
+        If (boolCertNumberProvided = True) Then Me.txtKobudoInstructor.Value = sCertNumber Else Me.txtKobudoInstructor.Value = "view"
+        'TUITE
+    ElseIf (sSelectedCert = "txt10KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt10KyuTuite.Value = sCertNumber Else Me.txt10KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt9KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt9KyuTuite.Value = sCertNumber Else Me.txt9KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt8KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt8KyuTuite.Value = sCertNumber Else Me.txt8KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt7KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt7KyuTuite.Value = sCertNumber Else Me.txt7KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt6KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt6KyuTuite.Value = sCertNumber Else Me.txt6KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt5KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt5KyuTuite.Value = sCertNumber Else Me.txt5KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt4KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt4KyuTuite.Value = sCertNumber Else Me.txt4KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt3KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt3KyuTuite.Value = sCertNumber Else Me.txt3KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt2KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt2KyuTuite.Value = sCertNumber Else Me.txt2KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txt1KyuTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txt1KyuTuite.Value = sCertNumber Else Me.txt1KyuTuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack1Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack1Tuite.Value = sCertNumber Else Me.txtBlack1Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack2Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack2Tuite.Value = sCertNumber Else Me.txtBlack2Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack3Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack3Tuite.Value = sCertNumber Else Me.txtBlack3Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack4Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack4Tuite.Value = sCertNumber Else Me.txtBlack4Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack5Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack5Tuite.Value = sCertNumber Else Me.txtBlack5Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack6Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack6Tuite.Value = sCertNumber Else Me.txtBlack6Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack7Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack7Tuite.Value = sCertNumber Else Me.txtBlack7Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack8Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack8Tuite.Value = sCertNumber Else Me.txtBlack8Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtBlack9Tuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtBlack9Tuite.Value = sCertNumber Else Me.txtBlack9Tuite.Value = "view"
+    ElseIf (sSelectedCert = "txtInstructorTuite") Then
+        If (boolCertNumberProvided = True) Then Me.txtInstructorTuite.Value = sCertNumber Else Me.txtInstructorTuite.Value = "view"
+    End If
+End Function
+
+Private Sub txt10KyuTuite_Click()
+    sSelectedCert = "txt10KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt1KyuKarate_Click()
+    sSelectedCert = "txt1KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt1KyuKobudo_Click()
+    sSelectedCert = "txt1KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt1KyuTuite_Click()
+    sSelectedCert = "txt1KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt2KyuKarate_Click()
+    sSelectedCert = "txt2KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt2KyuKobudo_Click()
+    sSelectedCert = "txt2KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt2KyuTuite_Click()
+    sSelectedCert = "txt2KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt3KyuKarate_Click()
+    sSelectedCert = "txt3KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt3KyuKobudo_Click()
+    sSelectedCert = "txt3KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt3KyuTuite_Click()
+    sSelectedCert = "txt3KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt4KyuKarate_Click()
+    sSelectedCert = "txt4KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt4KyuKobudo_Click()
+    sSelectedCert = "txt4KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt4KyuTuite_Click()
+    sSelectedCert = "txt4KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt5KyuKarate_Click()
+    sSelectedCert = "txt5KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt5KyuKobudo_Click()
+    sSelectedCert = "txt5KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt5KyuTuite_Click()
+    sSelectedCert = "txt5KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt6KyuKarate_Click()
+    sSelectedCert = "txt6KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt6KyuKobudo_Click()
+    sSelectedCert = "txt6KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt6KyuTuite_Click()
+    sSelectedCert = "txt6KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt7KyuKarate_Click()
+    sSelectedCert = "txt7KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt7KyuKobudo_Click()
+    sSelectedCert = "txt7KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt7KyuTuite_Click()
+    sSelectedCert = "txt7KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt8KyuKarate_Click()
+    sSelectedCert = "txt8KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt8KyuKobudo_Click()
+    sSelectedCert = "txt8KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt8KyuTuite_Click()
+    sSelectedCert = "txt8KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt9KyuKarate_Click()
+    sSelectedCert = "txt9KyuKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt9KyuKobudo_Click()
+    sSelectedCert = "txt9KyuKobudo"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txt9KyuTuite_Click()
+    sSelectedCert = "txt9KyuTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack1Karate_Click()
+    sSelectedCert = "txtBlack1Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack1Tuite_Click()
+    sSelectedCert = "txtBlack1Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack2Karate_Click()
+    sSelectedCert = "txtBlack2Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack2Tuite_Click()
+    sSelectedCert = "txtBlack2Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack3Karate_Click()
+    sSelectedCert = "txtBlack3Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack3Tuite_Click()
+    sSelectedCert = "txtBlack3Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack4Karate_Click()
+    sSelectedCert = "txtBlack4Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack4Tuite_Click()
+    sSelectedCert = "txtBlack4Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack5Karate_Click()
+    sSelectedCert = "txtBlack5Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack5Tuite_Click()
+    sSelectedCert = "txtBlack5Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack6Karate_Click()
+    sSelectedCert = "txtBlack6Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack6Tuite_Click()
+    sSelectedCert = "txtBlack6Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack7Karate_Click()
+    sSelectedCert = "txtBlack7Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack7Tuite_Click()
+    sSelectedCert = "txtBlack7Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack8Karate_Click()
+    sSelectedCert = "txtBlack8Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack8Tuite_Click()
+    sSelectedCert = "txtBlack8Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack9Karate_Click()
+    sSelectedCert = "txtBlack9Karate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtBlack9Tuite_Click()
+    sSelectedCert = "txtBlack9Tuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtInstructorKarate_Click()
+    sSelectedCert = "txtInstructorKarate"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtInstructorTuite_Click()
+    sSelectedCert = "txtInstructorTuite"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack1_Click()
+    sSelectedCert = "txtKobudoBlack1"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack2_Click()
+    sSelectedCert = "txtKobudoBlack2"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack3_Click()
+    sSelectedCert = "txtKobudoBlack3"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack4_Click()
+    sSelectedCert = "txtKobudoBlack4"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack5_Click()
+    sSelectedCert = "txtKobudoBlack5"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack6_Click()
+    sSelectedCert = "txtKobudoBlack6"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack7_Click()
+    sSelectedCert = "txtKobudoBlack7"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack8_Click()
+    sSelectedCert = "txtKobudoBlack8"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoBlack9_Click()
+    sSelectedCert = "txtKobudoBlack9"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
+Private Sub txtKobudoInstructor_Click()
+    sSelectedCert = "txtKobudoInstructor"
+    Call openFile 'takes the variable sSelectedCert
+End Sub
+
