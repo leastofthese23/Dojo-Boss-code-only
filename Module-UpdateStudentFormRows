@@ -1,0 +1,41 @@
+Option Compare Database
+
+Function updateStudentSummaryRow(formName As String, rowNumber As Integer, studentName As String)
+    Dim std As New student
+    Dim sSQL As String
+    Dim iTimeRankReq As Integer
+    Dim iMonthsToNextPromo As Integer
+    Dim beltColor As Long
+    Dim iInnerWidth As Integer
+    Dim controlLength As Single
+    
+    std.GetStudentInfo (studentName)
+    
+    ''' Get any additional student info needed and display the information in the corresponding row. '''
+    Forms(formName).Controls("txtStudentRank" & rowNumber).Value = std.rank 'display the current rank in the corresponding row
+    iTimeRankReq = getTimeRequirementForCurrentRank(std.rank) '*
+    Forms(formName).Controls("txtRankTimeReq" & rowNumber).Value = iTimeRankReq & " months" 'display the time rank requirement in the corresponding row
+    Forms(formName).Controls("txtTimeSpentInRank" & rowNumber).Value = std.monthsInRank & " months" 'display time spend in rank in the corresponding row
+    iMonthsToNextPromo = (iTimeRankReq - std.monthsInRank)
+    'display nearest possible promotion in the corresponding row
+    If (iMonthsToNextPromo <= 0) Then
+        Forms(formName).Controls("txtNearestPossiblePromo" & rowNumber).Value = "now"
+    Else
+        Forms(formName).Controls("txtNearestPossiblePromo" & rowNumber).Value = iMonthsToNextPromo & " months"
+    End If
+    Forms(formName).Controls("txtPaymentStatus" & rowNumber).Value = std.paymentStatus 'display the payment status in the corresponding text box
+    Forms(formName).Controls("txtRate" & rowNumber).Value = std.monthlyRate 'display the monthly rate in the corresponding text box
+    Forms(formName).Controls("comboStudentName" & rowNumber).Value = studentName 'to resolve issue with "#value?" appearing in the dropDown box after a selection is made.
+    
+    'set progress bar & fill with color
+    controlLength = 28.5
+    iInnerWidth = getProgressForBar(std.monthsInRank, iTimeRankReq, controlLength)
+    beltColor = getStudentColor(std.rank)
+    Forms(formName).Controls("lblInnerProgressBar" & rowNumber).Width = iInnerWidth 'set width of inner progress bar
+    Forms(formName).Controls("lblInnerProgressBar" & rowNumber).BackColor = beltColor 'fill with belt color
+    
+    'Since the user changed a name selection in one of the dropDown boxes we will now update the user's preferences stored in the DropDownDefaults table.
+    sSQL = "UPDATE DropDownDefaults SET studentName = '" & studentName & "' WHERE DropDownDefaults.[ID] = " & rowNumber & ";"
+    DoCmd.SetWarnings False
+    DoCmd.RunSQL sSQL
+End Function
