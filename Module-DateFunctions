@@ -1,0 +1,64 @@
+Option Compare Database
+
+Function validateDOB(Optional ByVal dtDOB As Date, Optional ByVal sDOB As String) As Boolean 'verifies that parameter is a date and not in the future.
+    validateDOB = True 'remains true unless issue found
+    'see if date object was provided or string was provided
+    If (sDOB <> "") Then 'string was provided
+        If (Not IsDate(sDOB)) Then
+            validateDOB = False
+        Else
+            dtDOB = CDate(sDOB)
+        End If
+    End If
+    
+    If (dtDOB > Date) Then validateDOB = False
+End Function
+
+Function getAgeFromDOB(Optional ByVal dtDOB As Date, Optional ByVal sDOB As String) As String  'Does not contain input validation, so any variable sent to this function must be valid.
+    Dim iAge As Integer
+    Dim alreadyHadBdayThisYear As Boolean
+    
+    If (sDOB <> "") Then 'string param was sent
+        dtDOB = CDate(sDOB)
+    End If
+    
+    iAge = DateDiff("yyyy", dtDOB, Date) 'this gives the DOB only if Bday has already happened this year.
+    alreadyHadBdayThisYear = checkIfAlreadyHadBdayThisYear(dtDOB)
+    If (alreadyHadBdayThisYear = False) Then iAge = (iAge - 1)
+    getAgeFromDOB = CStr(iAge)
+End Function
+
+Function checkIfAlreadyHadBdayThisYear(dtDOB As Date) As Boolean
+    Dim sDOBThisYear As String
+    Dim sThisYear As String
+    Dim sBirthMonth As String
+    Dim sBirthDay As String
+    
+    Dim dtBirthdayThisYear As Date
+    Dim dtToday As Date
+    
+    'to see if birthday has already happened this year we have to create a date object for their birthday this year, then compare it to today's date.
+    'To create a date object for their Bday this year we need to abstract the birth month and birth day.
+    'We can accomplish this by using the built in method "Format" to return mm, then dd
+    sBirthMonth = CStr(Format(dtDOB, "mm"))
+    sBirthDay = CStr(Format(dtDOB, "dd"))
+
+    dtToday = Date
+    sThisYear = CStr(Format(dtToday, "yyyy"))
+    
+    sDOBThisYear = (sBirthMonth & "/" & sBirthDay & "/" & sThisYear)
+    dtBirthdayThisYear = CDate(sDOBThisYear)
+    
+    If (dtBirthdayThisYear > dtToday) Then
+        checkIfAlreadyHadBdayThisYear = False
+    Else
+        checkIfAlreadyHadBdayThisYear = True
+    End If
+    
+End Function
+
+Function isFutureDate(Optional ByVal dtDate As Date, Optional ByVal sDate As String) As Boolean 'assumes a valid date is sent, either as a string or date object.
+    isFutureDate = False 'remains false unless issue found
+    If (sDate <> "") Then dtDate = CDate(sDate) 'string was provided
+    If (dtDate > Date) Then isFutureDate = True
+End Function
