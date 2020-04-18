@@ -1,0 +1,49 @@
+Option Compare Database
+
+
+Function getStudentColor(sStudentRank As String) As Long
+    Dim clr As New ColorCollection
+    
+    If (InStr(sStudentRank, "white")) Then
+        getStudentColor = clr.white
+    ElseIf (InStr(sStudentRank, "blue")) Then
+        getStudentColor = clr.blue
+    ElseIf (InStr(sStudentRank, "green")) Then
+        getStudentColor = clr.green
+    ElseIf (InStr(sStudentRank, "brown")) Then
+        getStudentColor = clr.brown
+    Else
+        getStudentColor = clr.black
+    End If
+End Function
+
+Function getProgressForBar(iMonthsInRank As Integer, iReqMonths As Integer, controlLength As Single) As Integer
+    Dim sglPercentComplete As Single
+    
+    If (iMonthsInRank = 0) Then 'avoid dividing by 0
+        sglPercentComplete = 0
+    ElseIf (iMonthsInRank >= iReqMonths) Then
+        sglPercentComplete = 100
+    Else
+        sglPercentComplete = 100 * (iMonthsInRank / iReqMonths)
+    End If
+
+    getProgressForBar = CInt(Round((sglPercentComplete * controlLength), 0))
+End Function
+
+Function getMonthsRemaining(iMonthsCompleted As Integer, iMonthsReq As Integer) As Integer
+    If (iMonthsCompleted >= iMonthsReq) Then
+        getMonthsRemaining = 0
+    Else
+        getMonthsRemaining = (iMonthsReq - iMonthsCompleted)
+    End If
+End Function
+
+
+
+
+
+
+
+
+
