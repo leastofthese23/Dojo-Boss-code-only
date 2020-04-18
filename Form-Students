@@ -1,0 +1,287 @@
+Option Compare Database
+'* = this variable is being used many times in different functions in this module. For the sake of brevity/cleanliness declare once here instead of declaring over & over again.
+Dim sSQL As String '*
+Dim dbs As Database '*
+Dim rs As Recordset '*
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' FORM LOAD SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Private Sub Form_Load()
+    Call setDropDownSelectionsToPreviousUserSelections
+End Sub
+Private Sub Form_Open(Cancel As Integer)
+    Call setDropDownSelectionsToPreviousUserSelections
+End Sub
+
+Function refreshForm()
+On Error Resume Next
+    Me.Refresh
+    Call comboStudentName1_Click
+    Call comboStudentName2_Click
+    Call comboStudentName3_Click
+    Call comboStudentName4_Click
+    Call comboStudentName5_Click
+    Call comboStudentName6_Click
+    Call comboStudentName7_Click
+End Function
+
+Function setDropDownSelectionsToPreviousUserSelections()
+    Me.comboStudentName1.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 1")
+    Me.comboStudentName2.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 2")
+    Me.comboStudentName3.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 3")
+    Me.comboStudentName4.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 4")
+    Me.comboStudentName5.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 5")
+    Me.comboStudentName6.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 6")
+    Me.comboStudentName7.Value = DLookup("studentName", "DropDownDefaults", "DropDownDefaults.[ID] = 7")
+    
+    Call refreshForm
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END FORM LOAD SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' DATABASE QUERY SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Function promoteStudentAndUpdateTable(sStudentName As String, sNewRank As String)
+    Call connectToDB
+    sSQL = "UPDATE Students SET currentRank = '" & sNewRank & "', promotionDate = #" & Date & "# WHERE studentName = '" & sStudentName & "';"
+    DoCmd.RunSQL sSQL
+End Function
+
+Function connectToDB()
+    Set dbs = CurrentDb
+End Function
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END DATABASE QUERY SECTION ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' BUTTON ON_CLICK SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Private Sub imgAddNewStudent_Click()
+    DoCmd.OpenForm formName:="AddNewStudent"
+End Sub
+Private Sub lblAddNewStudent_Click()
+    DoCmd.OpenForm formName:="AddNewStudent"
+End Sub
+Private Sub imgCerts_Click()
+    DoCmd.OpenForm formName:="Certs"
+End Sub
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm formName:="AttendanceTracking"
+End Sub
+Private Sub btnCalendar_Click()
+    Forms("Home").openCalendar
+End Sub
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm formName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm formName:="DojoForms"
+End Sub
+Private Sub btnHome_Click()
+    DoCmd.OpenForm formName:="Home"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm formName:="Messaging"
+End Sub
+Private Sub btnSettings_Click()
+    DoCmd.OpenForm formName:="Settings"
+End Sub
+Private Sub btnRankReq_Click()
+    DoCmd.OpenForm formName:="RankReq"
+End Sub
+Private Sub btnRefresh_Click()
+    Call refreshForm
+End Sub
+Private Sub btnRefresh_GotFocus()
+    Call refreshForm
+End Sub
+
+
+
+
+Private Sub lblPromoteNow1_Click()
+    Call promoteNowClicked(1)
+End Sub
+Private Sub lblPromoteNow2_Click()
+    Call promoteNowClicked(2)
+End Sub
+Private Sub lblPromoteNow3_Click()
+    Call promoteNowClicked(3)
+End Sub
+Private Sub lblPromoteNow4_Click()
+    Call promoteNowClicked(4)
+End Sub
+Private Sub lblPromoteNow5_Click()
+    Call promoteNowClicked(5)
+End Sub
+Private Sub lblPromoteNow6_Click()
+    Call promoteNowClicked(6)
+End Sub
+Private Sub lblPromoteNow7_Click()
+    Call promoteNowClicked(7)
+End Sub
+
+
+
+Private Sub lblViewStudentDetails1_Click()
+    Call viewStudentDetails(1)
+End Sub
+Private Sub lblViewStudentDetails2_Click()
+    Call viewStudentDetails(2)
+End Sub
+Private Sub lblViewStudentDetails3_Click()
+    Call viewStudentDetails(3)
+End Sub
+Private Sub lblViewStudentDetails4_Click()
+    Call viewStudentDetails(4)
+End Sub
+Private Sub lblViewStudentDetails5_Click()
+    Call viewStudentDetails(5)
+End Sub
+Private Sub lblViewStudentDetails6_Click()
+    Call viewStudentDetails(6)
+End Sub
+Private Sub lblViewStudentDetails7_Click()
+    Call viewStudentDetails(7)
+End Sub
+
+
+
+Private Sub comboStudentName1_Click()
+    Call updateStudentSummaryRow(Me.name, 1, Me.comboStudentName1.Value)
+End Sub
+Private Sub comboStudentName2_Click()
+    Call updateStudentSummaryRow(Me.name, 2, Me.comboStudentName2.Value)
+End Sub
+Private Sub comboStudentName3_Click()
+    Call updateStudentSummaryRow(Me.name, 3, Me.comboStudentName3.Value)
+End Sub
+Private Sub comboStudentName4_Click()
+    Call updateStudentSummaryRow(Me.name, 4, Me.comboStudentName4.Value)
+End Sub
+Private Sub comboStudentName5_Click()
+    Call updateStudentSummaryRow(Me.name, 5, Me.comboStudentName5.Value)
+End Sub
+Private Sub comboStudentName6_Click()
+    Call updateStudentSummaryRow(Me.name, 6, Me.comboStudentName6.Value)
+End Sub
+Private Sub comboStudentName7_Click()
+    Call updateStudentSummaryRow(Me.name, 7, Me.comboStudentName7.Value)
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END BUTTON ON_CLICK SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' GENERAL FUNCTIONS SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function promoteNowClicked(rowNumber As Integer)
+    Dim sCurrentRank As String
+    Dim sNextRank As String
+    Dim confirm As Boolean
+    Dim sStudentName As student
+    
+    sCurrentRank = Me.Controls("txtStudentRank" & rowNumber).Value
+    sNextRank = getNextRank(sCurrentRank)
+    confirm = getUserConfirmation(sCurrentRank, sNextRank) 'asks the user to confirm the promotion, returns response as boolean
+    
+    If (confirm = True) Then
+        sStudentName = Me.Controls("comboStudentName" & rowNumber).Value
+        Call promoteStudentAndUpdateTable(sStudentName, sNextRank)
+        Call updateStudentSummaryRow(rowNumber, sStudentName) 'refresh data for this student so user will see the student's new info
+    End If
+End Function
+Function getNextRank(sCurrentRank As String) As String
+    Dim ranks As New RanksCollection
+    getNextRank = ranks.getNextRank(sCurrentRank)
+End Function
+
+Function getUserConfirmation(sCurrentRank As String, sNextRank As String) As Boolean
+    Dim sMessage As String
+    Dim userSelection As Integer
+    
+    sMessage = ("Student will be promoted from '" & sCurrentRank & "' to '" & sNextRank & "'. Time in rank will be set to 0 months." & vbCrLf & _
+                "(You can adjust the time in rank after the student is promoted)")
+    userSelection = MsgBox(sMessage, vbOKCancel, "confirm promotion")
+    If (userSelection = vbOK) Then
+        getUserConfirmation = True
+    Else
+        getUserConfirmation = False
+    End If
+End Function
+
+Function openSelectedStudentDetails(sStudentName As String)
+    DoCmd.OpenForm formName:="StudentDetails"
+    Call Forms("StudentDetails").loadFromCallingPage(sStudentName)
+End Function
+
+
+
+
+
+
+Function viewStudentDetails(rowNumber As Integer)
+On Error Resume Next
+    Dim clr As New ColorCollection
+    Dim sStudentName As String
+    
+    sStudentName = ""
+    sStudentName = Me.Controls("comboStudentName" & rowNumber).Value
+    
+    If (sStudentName = "") Then
+        MsgBox ("You must select a student first")
+        Me.Controls("comboStudentName" & rowNumber).BorderColor = clr.red
+    Else
+        Me.Controls("comboStudentName" & rowNumber).BorderColor = clr.darkGrey
+        Call openSelectedStudentDetails(sStudentName)
+    End If
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END GENERAL FUNCTIONS SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+
+
+
