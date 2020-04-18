@@ -1,0 +1,437 @@
+Option Compare Database
+
+Dim sAddress As String
+Dim sCity As String
+Dim sDOB As String
+Dim sEmail As String
+Dim sFilePathBlankSignature As String
+Dim sGender As String
+Dim sMedical As String
+Dim sParentName As String
+Dim sPhone As String
+Dim sPriorTraining As String
+Dim sSQL As String
+Dim sState As String
+Dim sStudentName As String
+Dim sUserMessage As String
+Dim sZip As String
+
+Dim userSelection As Integer
+
+Dim boolAllGood As Boolean
+Dim boolStudentIsInDB As Boolean
+Dim boolSubmitButtonCanBeEnabled As Boolean
+
+Dim bytAge As Byte
+
+Dim dbs As DAO.Database
+Dim rs As DAO.Recordset
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm formName:="AttendanceTracking"
+End Sub
+Private Sub btnCalendar_Click()
+    FollowHyperlink "http://ekkc-nw.com/class-calendar/"
+End Sub
+Private Sub btnClear_Click()
+     Call clearForm
+End Sub
+Function clearForm()
+    Me.comboAge.Value = ""
+    Me.comboCity.Value = ""
+    Me.comboGender.Value = ""
+    Me.comboState.Value = "WA"
+    Me.comboStudentName.Value = ""
+    Me.txtAddress.Value = ""
+    Me.txtDateParent.Value = ""
+    Me.txtDOB.Value = ""
+    Me.txtEmail.Value = ""
+    Me.txtMedical.Value = ""
+    Me.txtParentName.Value = ""
+    Me.txtPhone.Value = ""
+    Me.txtPriorTraining.Value = ""
+    Me.txtZip.Value = ""
+    Me.imgSignatureParent.picture = Application.CurrentProject.Path & "\system\" & "blankSignature.jpg"
+    Me.imgSignatureStudent.picture = Application.CurrentProject.Path & "\system\" & "blankSignature.jpg"
+    Me.btnSubmit.Enabled = False
+    Me.lblParentName.Caption = ""
+    Me.lblStudentName.Caption = ""
+    Me.btnSubmit.Enabled = False
+End Function
+
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm formName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm formName:="Financials"
+End Sub
+Private Sub btnGear_Click()
+    DoCmd.OpenForm formName:="Gear"
+End Sub
+
+Private Sub btnBackToForms_Click()
+    DoCmd.OpenForm formName:="DojoForms"
+End Sub
+
+Private Sub btnHome_Click()
+    DoCmd.OpenForm formName:="Home"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm formName:="Messaging"
+End Sub
+
+Private Sub btnPrint_Click()
+    Forms(Me.Form.name).Printer.Orientation = acPRORPortrait
+    DoCmd.OpenForm Me.Form.name, acPreview
+    'DoCmd.PrintOut acPages, 1, 1
+End Sub
+
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm formName:="Students"
+End Sub
+
+Private Sub btnSubmit_Click()
+'On Error Resume Next
+    'OVERVIEW OF THIS SUB:
+    'if form was properly and completely filled out, then proceed. otherwise, message the user; do not proceed until fixed.
+    'see if the student is in the database.
+    'if the student is in the database, then update their information with the additional info in this form.
+    'if not, don't worry about that.
+    'save the form as a word document or pdf. save in the folder presentDir\Signed Forms
+    'clear the form.
+    
+    'validate the form. make sure that everything was filled out properly.
+    Call validateStudentName 'checks to make sure a student name was entered/selected. sets the variables (boolAllGood, sStudentName)
+    If (boolAllGood = False) Then Exit Sub
+    bytAge = Me.comboAge.Value 'no need to validate this in vba (validation is in the form)
+    sGender = Me.comboGender.Value 'no need to validate this in vba (validation is in the form)
+    Call checkDOB 'sets the variables (sDOB, boolAllGood)
+    Call checkParentName 'sets the variable sParentName. if N/A, sParentName = ""
+    If (boolAllGood = False) Then Exit Sub
+    
+    Call validateStreetAddress ' sets the variables (sAddress, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    Call validateCity 'sets the variables (sCity, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    Call validateState 'sets the variables (sState, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    Call checkZipCode 'sets the variables (sZip, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    Call checkPhone 'sets the variables (sPhone, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    
+    Call checkEmail 'sets the variables (sEmail, boolAllGood)
+    If (boolAllGood = False) Then Exit Sub
+    Call checkSignatures 'sets boolAllGood
+    If (boolAllGood = False) Then Exit Sub
+    Call getPriorTraining 'sets the variable sPriorTraining to text entered or empty string
+    Call getMedical 'sets the variable sMedical to text entered or empty string
+    Call saveDataIntoTable 'takes the variables (sStudentName, bytAge, sGender, sDOB, sParentName, sAddress, sCity, sState, sZip, sPhone, sEmail, sPriorTraining, sMedical)
+    Call saveFormAsPDF
+    MsgBox ("Information Release form submitted.")
+    Call clearForm
+End Sub
+
+Function saveFormAsPDF()
+    Dim sFilePathAndName As String
+    
+    sFilePathAndName = (Application.CurrentProject.Path & "\Signed Forms\Information Release " & sStudentName & ".pdf")
+    DoCmd.OutputTo acOutputForm, "", acFormatPDF, sFilePathAndName, False
+End Function
+
+Function checkSignatures() 'sets boolAllGood
+    'we already know that the student section is signed, because the submit button is not enabled until the student panel is signed.
+    'make sure that the parent sections is signed if needed
+    sBlanksignature = (Application.CurrentProject.Path & "\system\blankSignature.jpg")
+    sBlanksignature2 = (Application.CurrentProject.Path & "\images\system\signatures\blankSignature.bmp")
+    Dim sUserMessage As String
+    Dim userSelection As Integer
+
+    If (Me.txtParentName.Value = "(if under 18)" Or IsNull(Me.txtParentName.Value) Or (Me.txtParentName.Value = "")) Then 'if no parent name is present
+        'Parent name is not present. Make sure that the signature wasn't added.
+        If (Me.imgSignatureParent.picture = sBlanksignature) Or (Me.imgSignatureParent.picture = sBlanksignature2) Then
+            'we're good, there is no parent name and no signature
+            boolAllGood = True
+        Else
+            'msgBox the user, parent signature is present but parent name is missing
+            sUserMessage = ("It appears that you have added a parent signature but no parent name." & vbCrLf & _
+                            "Would you like to clear the parent signature panel?")
+            userSelection = MsgBox(sUserMessage, vbYesNo, "Parent name missing")
+            If (userSelection = vbYes) Then
+                'clear the parent signature panel
+                Me.imgSignatureStudent.picture = sBlanksignature
+                boolAllGood = True
+            Else
+                MsgBox ("Please add parent name")
+                Me.txtParentName.SetFocus
+                boolAllGood = False 'exit sub not allowed here
+            End If
+        End If
+    Else
+        'Parent name is present. Make sure that signature is also present.
+        If (Me.imgSignatureParent.picture = sBlanksignature) Then 'if no signature present then msgBox and exit sub.
+            MsgBox "It appears that a parent name was added. If a parent signature is not required, please delete the parent name; otherwise you must add a parent signature. "
+            boolAllGood = False 'exit sub not allowed here
+        Else: boolAllGood = True 'parent name and signature are both present. we're good.
+        End If
+    End If
+End Function
+
+Function saveDataIntoTable() 'takes the variables (sStudentName, bytAge, sGender, sDOB, sParentName, sAddress, sCity, sState, sZip, sPhone, sEmail, sPriorTraining, sMedical)
+    'TODO: consider creating a student object class and passing the student object.
+    
+    Call seeIfStudentIsAlreadyInDB 'takes the variable sStudentName, sets the variable boolStudentIsInDB
+    'if student is already in DB, then update. else: insert
+    If (boolStudentIsInDB = True) Then
+        'do update
+        sSQL = "UPDATE Students SET age = " & bytAge & ", gender = '" & sGender & "',  DOB = #" & sDOB & "#,  parentName = '" & sParentName & _
+               "', address = '" & sAddress & "',  city = '" & sCity & "', state = '" & sState & "', zipCode = '" & sZip & "', phoneNumber = '" & sPhone & _
+               "', email = '" & sEmail & "', outsideTraining = '" & sPriorTraining & "', medicalIssues = '" & sMedical & "' WHERE Students.[studentName] = '" & sStudentName & "';"
+               
+    Else
+        'do insert
+        'studentName phoneNumber Email currentRank promotionDate monthsInRank monthlyRate Picture paymentStatus Comments age gender Address city State zipCode DOB outsideTraining medicalIssues parentName
+        sSQL = "INSERT INTO Students (studentName, phoneNumber, Email, age, gender, Address, city, State, zipCode, DOB, outsideTraining, medicalIssues, parentName) VALUES " & _
+               "('" & sStudentName & "', '" & sPhone & "', '" & sEmail & "', '" & sGender & "', '" & sAddress & "', '" & sCity & "', '" & sState & "', '" & sZip & "', #" & sDOB & "#, '" & sPriorTraining & "', '" & sMedical & "', '" & sParentName & "');"
+    End If
+    
+    'MsgBox ("sSQL = " & sSQL)
+    DoCmd.RunSQL sSQL
+End Function
+
+Function seeIfStudentIsAlreadyInDB() 'takes the variable sStudentName, sets the variable boolStudentIsInDB
+    sCriteria = ("Students.[studentName] = '" & sStudentName & "'")
+    iRecordCount = DCount("studentName", "Students", sCriteria)
+    If (iRecordCount > 0) Then boolStudentIsInDB = True Else boolStudentIsInDB = False
+End Function
+
+Function getMedical()
+    On Error Resume Next
+    sMedical = ""
+    sMedical = Me.txtMedical.Value
+End Function
+
+Function getPriorTraining()
+    On Error Resume Next
+    sPriorTraining = ""
+    sPriorTraining = Me.txtPriorTraining.Value
+End Function
+
+Function checkThisInput(formElementName As String, inputName As String) As Variant 'sets the variable boolAllGood, returns value from user input. Includes error messaging to user.
+    If (IsNull(Me.Controls(formElementName).Value) Or Me.Controls(formElementName).Value = "") Then
+        boolAllGood = False
+        MsgBox ("please enter a value for " & inputName)
+        Me.Controls(formElementName).SetFocus
+    Else
+        boolAllGood = True
+        checkThisInput = Me.Controls(formElementName).Value
+    End If
+End Function
+
+Function checkEmail() 'sets the variables (sEmail, boolAllGood)
+    sEmail = checkThisInput("txtEmail", "email")
+
+    'If ((Me.txtEmail.Value = "") Or (IsNull(Me.txtEmail.Value))) Then
+    '    MsgBox "please enter a value for email"
+    '    boolAllGood = False
+    '    Me.txtEmail.SetFocus
+    'Else
+    '    boolAllGood = True
+    '    sEmail = Me.txtEmail.Value
+    'End If
+End Function
+
+Function checkPhone() 'sets the variables (sPhone, boolAllGood)
+    
+    
+    
+    If ((Me.txtPhone.Value = "") Or (IsNull(Me.txtPhone.Value))) Then
+        MsgBox "please enter a phone number"
+        Me.txtPhone.SetFocus
+        boolAllGood = False
+    Else
+        boolAllGood = True
+        sPhone = Me.txtPhone.Value
+    End If
+End Function
+
+Function checkDOB() 'sets the variables (sDOB, boolAllGood)
+    If ((Me.txtDOB.Value = "") Or (IsNull(Me.txtDOB.Value))) Then
+        MsgBox "please enter a value for date of birth"
+        Me.txtDOB.SetFocus
+        boolAllGood = False
+    Else
+        sDOB = Me.txtDOB.Value
+        boolAllGood = True
+    End If
+End Function
+
+Function checkZipCode() 'sets the variables (sZip, boolAllGood)
+    If ((Me.txtZip.Value = "") Or (IsNull(Me.txtZip.Value))) Then
+        MsgBox "please enter a value for zip code"
+        Me.txtZip.SetFocus
+        boolAllGood = False
+    Else
+        boolAllGood = True
+        sZip = Me.txtZip.Value
+    End If
+End Function
+
+Function validateState() 'sets the variables (sState, boolAllGood)
+    If ((Me.comboState.Value = "") Or (IsNull(Me.comboState.Value))) Then
+        MsgBox "please select a state"
+        Me.comboState.SetFocus
+        boolAllGood = False
+    Else
+        boolAllGood = True
+        sState = Me.comboState.Value
+    End If
+End Function
+
+Function validateCity() 'sets the variables (sCity, boolAllGood)
+    If ((Me.comboCity.Value = "") Or (IsNull(Me.comboCity.Value))) Then
+        MsgBox "please enter a value for city. If your city is not in the list you may type it in."
+        Me.comboCity.SetFocus
+        boolAllGood = False
+    Else
+        sCity = Me.comboCity.Value
+        boolAllGood = True
+    End If
+End Function
+
+Function validateStreetAddress() ' sets the variables (sAddress, boolAllGood)
+    If ((Me.txtAddress.Value = "") Or (IsNull(Me.txtAddress.Value))) Then
+        MsgBox "please enter a value for street address"
+        Me.txtAddress.SetFocus
+        boolAllGood = False
+    Else
+        sAddress = Me.txtAddress.Value
+        boolAllGood = True
+    End If
+End Function
+
+Function checkParentName() 'sets the variable sParentName
+    If (Me.txtParentName.Value = "(if under 18)" Or Me.txtParentName.Value = "" Or IsNull(Me.txtParentName.Value)) Then
+        sParentName = ""
+    Else: sParentName = Me.txtParentName.Value
+    End If
+End Function
+
+Function validateStudentName() 'checks to make sure a student name was entered/selected. sets the variables (boolAllGood, sStudentName)
+    If (Me.comboStudentName.Value = "" Or IsNull(Me.comboStudentName.Value)) Then
+        MsgBox "please enter a value for student name"
+        Me.comboStudentName.SetFocus
+        boolAllGood = False
+    Else
+        sStudentName = Me.comboStudentName.Value
+        boolAllGood = True
+    End If
+End Function
+
+Private Sub comboStudentName_AfterUpdate()
+    Call autofillOtherFormElementsIfStudentIsInDB
+End Sub
+
+Function autofillOtherFormElementsIfStudentIsInDB()
+'On Error Resume Next
+    'see if student is in database
+    sStudentName = Me.comboStudentName.Value
+    If (IsNull(sStudentName) Or sStudentName = "") Then
+        'do nothing
+    Else
+        sSQL = "SELECT s.[phoneNumber], s.[email], s.[gender], s.[DOB], s.[address], s.[city], s.[state], s.[zipCode], s.[outsideTraining], s.[medicalIssues] FROM Students AS s WHERE s.[studentName] = '" & sStudentName & "';"
+        Set dbs = CurrentDb
+        Set rs = dbs.OpenRecordset(sSQL)
+        If (rs.RecordCount > 0) Then 'if student is in database
+            rs.MoveFirst
+            Me.txtPhone.Value = rs.Fields(0) 'put phone number and email in form elements
+            Me.txtEmail.Value = rs.Fields(1)
+            Me.comboGender.Value = rs.Fields(2)
+            sDOB = rs.Fields(3)
+            Me.txtDOB.Value = sDOB
+            Me.comboAge.Value = getAgeFromDOB(sDOB)
+            Me.txtAddress.Value = rs.Fields(4)
+            Me.comboCity.Value = rs.Fields(5)
+            Me.comboState.Value = rs.Fields(6)
+            Me.txtZip.Value = rs.Fields(7)
+            Me.txtPriorTraining.Value = rs.Fields(8)
+            Me.txtMedical.Value = rs.Fields(9)
+            Me.lblStudentName.Caption = sStudentName
+        'else do nothing
+        End If
+    End If
+    
+End Function
+
+
+Private Sub Form_Open(Cancel As Integer)
+    Call clearSignaturePanels
+    Call makeSubmitButtonUnckickable
+End Sub
+
+Function makeSubmitButtonUnckickable()
+    Me.btnSubmit.Enabled = False
+End Function
+
+Function clearSignaturePanels()
+    sFilePathBlankSignature = (Application.CurrentProject.Path & "\images\system\Signatures\blankSignature.bmp")
+    Me.imgSignatureParent.picture = sFilePathBlankSignature
+    Me.imgSignatureStudent.picture = sFilePathBlankSignature
+    Me.lblParentName.Caption = ""
+    Me.lblStudentName.Caption = ""
+End Function
+
+Private Sub imgSignatureParent_Click()
+    If (Me.txtParentName.Value = "(if under 18)" Or IsNull(Me.txtParentName.Value) Or (Me.txtParentName.Value = "")) Then
+        MsgBox ("You must first enter a name for parent")
+        Me.txtParentName.BorderColor = 255 'red
+        Me.txtParentName.SetFocus
+    Else
+        Me.txtParentName.BorderColor = 14277081 'grey
+        DoCmd.OpenForm formName:="SignatureCapture"
+        Forms!signatureCapture!lblSignature.Caption = "Parent Signature - Information Release"
+        Forms!signatureCapture!signaturePanel.Ink.DeleteStrokes
+        Forms!signatureCapture!.Refresh
+    End If
+End Sub
+
+Function enableSubmitButton()
+    Me.btnSubmit.Enabled = True
+End Function
+
+Private Sub imgSignatureStudent_Click()
+    sStudentName = ""
+    sStudentName = Me.comboStudentName.Value
+    If (sStudentName = "") Or IsNull(sStudentName) Then
+        MsgBox ("You must first enter a name for student")
+        Me.comboStudentName.BorderColor = 255 'red
+        Me.comboStudentName.SetFocus
+    Else
+        Me.comboStudentName.BorderColor = 14277081 'grey
+        Call enableSubmitButton
+        DoCmd.OpenForm formName:="SignatureCapture"
+        Forms!signatureCapture!lblSignature.Caption = "Student Signature - Information Release"
+        Forms!signatureCapture!signaturePanel.Ink.DeleteStrokes
+        Forms!signatureCapture!.Refresh
+    End If
+End Sub
+
+
+
+Function makeSureParentSignatureIsPresent() 'sets the variable boolParentSigPresent
+    If (Me.imgSignatureParent.picture = sFilePathBlankSignature) Then
+        'parent did not sign.
+        boolParentSigPresent = False
+    Else: boolParentSigPresent = True
+    End If
+End Function
+
+Private Sub txtParentName_AfterUpdate()
+    If (Me.txtParentName.Value = "(if under 18)" Or IsNull(Me.txtParentName.Value) Or (Me.txtParentName.Value = "")) Then
+        Me.lblParentName.Caption = ""
+        Me.lineParentSig.Visible = False
+    Else
+        Me.lblParentName.Caption = Me.txtParentName.Value
+        Me.lineParentSig.Visible = True
+    End If
+End Sub
