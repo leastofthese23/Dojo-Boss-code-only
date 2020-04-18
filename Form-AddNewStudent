@@ -1,0 +1,589 @@
+Option Compare Database
+
+Dim s As String
+Dim sName As String
+Dim sPhoneNumber As String
+Dim sEmail As String
+Dim sComments As String
+Dim sSQL As String
+Dim sStudentName As String
+Dim sRankTimeReq As String
+Dim sDateToday As String
+Dim sDateDiffInMonths As String
+Dim sPromoDate As String
+Dim sRank As String
+Dim sTimeRankReq As String
+Dim sMonthsInRank As String
+Dim sStudentRank As String
+Dim sYears As String
+Dim sPercentComplete As String
+Dim sPaymentStatus As String
+Dim sFilePathAndName As String
+Dim sRelativeFilePath As String
+Dim sFullFilePath As String
+Dim sRelativePicture As String
+Dim sMonthsToNearestPromo As String
+Dim sNewRank As String
+Dim criteria As String
+Dim sParentName As String
+Dim sSmsGateway As String
+Dim sGender As String
+Dim sDOB As String
+Dim sCity As String
+Dim sState As String
+Dim sZip As String
+Dim sTraining As String
+Dim sMedical As String
+Dim sCarrier As String
+
+Dim bytMonthsToNextPromo As Byte
+Dim bytFormRowNumber As Byte
+
+Dim sglMonthlyRate As Single
+Dim sglDateDiffInDays As Single
+Dim sglYears As Single
+Dim sglDateDiffInMonths As Single
+Dim sglPercentageOfReqFulfilled As Single
+
+Dim iAge As Integer
+Dim iInnerWidth As Integer
+Dim iMonths As Integer
+Dim iMonthsCompleted As Integer
+Dim iMonthsRemaining As Integer
+Dim iMonthsToNearestPromo As Integer
+Dim iPercentComplete As Integer
+Dim iRankMonthReq As Integer
+Dim iRecordCount1 As Integer
+Dim iRecordCount2 As Integer
+Dim iStudentID As Integer
+Dim iStudentProgress As Integer
+Dim iYears As Integer
+Dim iMonthsInRank As Integer
+Dim iYearsInRank As Integer
+
+Dim lColor As Long
+
+Dim boolValidDOB As Boolean
+Dim boolAllGood As Boolean
+
+Dim dtOfPromo As Date
+Dim dtToday As Date
+Dim dtDOB As Date
+
+Dim dbs As Database
+Dim rs As Recordset
+Dim rs2 As Recordset
+
+
+Private Sub btnTestData_Click()
+    Me.txtName.Value = "Jimmy junior"
+    Me.txtParentName.Value = "Jimmy senior"
+    Me.txtPhoneNumber.Value = "4255687895"
+    Me.comboMobileCarrier.Value = "MetroPCS (T-Mobile)"
+    Me.txtEmail.Value = "Jimmy@gmail.com"
+    Me.txtDOB.Value = "06/13/1985"
+    Me.txtAge.Value = 34
+    Me.txtAddress.Value = "123 Maple st"
+    Me.txtZip.Value = "98201"
+    Me.txtOutsideTraining.Value = "none"
+    Me.txtMedicalIssues.Value = "hip replacement"
+    Me.txtComments.Value = "Good guy"
+End Sub
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' FORM LOAD SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Private Sub Form_Load()
+    Call clearForm
+End Sub
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END FORM LOAD SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' DATABASE QUERY SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function connectToDB()
+    Set dbs = CurrentDb
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END DATABASE QUERY SECTION ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' BUTTON ON_CLICK SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Private Sub btnClear_Click()
+    Call clearForm
+End Sub
+
+
+Private Sub btnBack_Click()
+    DoCmd.OpenForm formName:="Students"
+End Sub
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm formName:="AttendanceTracking"
+End Sub
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm formName:="Students"
+End Sub
+Private Sub btnCalendar_Click()
+    Forms("Home").openCalendar
+End Sub
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm formName:="Financials"
+End Sub
+Private Sub btnForms_Click()
+    DoCmd.OpenForm formName:="DojoForms"
+End Sub
+Private Sub btnHome_Click()
+    DoCmd.OpenForm formName:="Home"
+End Sub
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm formName:="Messaging"
+End Sub
+Private Sub btnSettings_Click()
+    DoCmd.OpenForm formName:="Settings"
+End Sub
+Private Sub btnRankReq_Click()
+    DoCmd.OpenForm formName:="RankReq"
+End Sub
+Private Sub btnRefresh_Click()
+    Call refreshForm
+End Sub
+Private Sub btnRefresh_GotFocus()
+    Call refreshForm
+End Sub
+
+
+
+
+Private Sub lblAddImage_Click()
+    Call imgNewStudent_Click
+End Sub
+Private Sub imgNewStudent_Click()
+sError = "image"
+On Error GoTo ErrorHandler
+    Dim sSpaceSeperatedFilePath As String
+    Dim sFilePathAndName As String
+    Dim sFileNameOnly As String
+    Dim indexOfImages As Integer
+    Dim varFile As Variant
+    Dim fDialog As Object
+    Set fDialog = Application.FileDialog(3)
+    
+    With fDialog
+        AllowMultiSelect = False
+        .InitialFileName = (Application.CurrentProject.Path & "\images\")
+    
+        If fDialog.Show = True Then
+            For Each varFile In .SelectedItems
+                sFilePathAndName = varFile
+                sSpaceSeperatedFilePath = Replace(sFilePathAndName, "\", " ")
+                If InStr(sSpaceSeperatedFilePath, "images") Then
+                    Me.imgNewStudent.picture = sFilePathAndName
+                    indexOfImages = InStr(1, sFilePathAndName, "images\")
+                    sFileNameOnly = Right(sFilePathAndName, Len(sFilePathAndName) - indexOfImages - 6)
+                    Me.imgNewStudent.ControlTipText = sFileNameOnly
+                Else: MsgBox ("You must upload/select an image from the Dojo Boss IMAGES FOLDER. Images selected/uploaded from other folders will not be saved. " & vbCrLf & vbCrLf & _
+                            "You can find the folder at the following address: " & Application.CurrentProject.Path & "\images")
+                      Call imgNewStudent_Click
+                End If
+            Next
+        End If
+    End With
+
+Exit Sub
+ErrorHandler:
+    If (sError = "image") Then
+        MsgBox ("image error occurred. Make sure you select an image file. ")
+    ElseIf (sError = "student name") Then
+          MsgBox ("student error occurred")
+    Else: MsgBox ("And unknown error occurred. ")
+    End If
+
+End Sub
+
+Private Sub lblCellPhoneCarrierLookup_Click()
+    FollowHyperlink "https://www.carrierlookup.com/"
+End Sub
+
+Private Sub txtDateOfLastPromotion_AfterUpdate() 'after user enters date of last promotion, calculate time in rank then populate the combo boxes for years in rank and months in rank.
+'On Error Resume Next
+    Dim dtOfPromo As Date
+    
+    dtOfPromo = Me.txtDateOfLastPromotion.Value
+    iMonthsInRank = calculateTimeInRank(dtOfPromo)
+    Call getYearsAndMonths
+
+    Me.comboYearsInRank.Value = iYearsInRank
+    Me.comboMonthsInRank.Value = iMonthsInRank
+End Sub
+
+Private Sub txtDOB_LostFocus()
+    Me.txtAge = getAgeFromDOB(Me.txtDOB.Value)
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END BUTTON ON_CLICK SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' GENERAL FUNCTIONS SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function clearForm()
+    Dim sFullFilePath As String
+    
+    Me.txtName.Value = ""
+    Me.txtParentName.Value = ""
+    Me.txtPhoneNumber.Value = ""
+    Me.comboMobileCarrier.Value = ""
+    Me.txtEmail.Value = ""
+    Me.comboCurrentRankNewStudent.Value = "10th kyu - white"
+    Me.comboYearsInRank.Value = 0
+    Me.comboMonthsInRank.Value = 0
+    Me.txtDOB.Value = "06/13/1985"
+    Me.txtAge.Value = ""
+    Me.txtAddress.Value = ""
+    Me.comboCity.Value = "Everett"
+    Me.comboState.Value = "WA"
+    Me.txtZip.Value = ""
+    sFullFilePath = (Application.CurrentProject.Path & "\images\" & "blank profile pic.bmp")
+    Me.imgNewStudent.picture = sFullFilePath
+    Me.imgNewStudent.ControlTipText = "blank profile pic.bmp"
+    Me.txtOutsideTraining.Value = ""
+    Me.txtMedicalIssues.Value = ""
+    Me.txtDateOfLastPromotion.Value = "04/13/2020"
+    Call txtDateOfLastPromotion_AfterUpdate 'this will trigger to calculate time in rank and fill time in rank values
+    Me.txtMonthlyRate.Value = 125
+    Me.txtPaymentStatus.Value = "up to date - autopay"
+    Me.txtComments.Value = ""
+    
+End Function
+
+Function calculateTimeInRank(dtOfPromo As Date) As Integer
+    Dim sglDateDiffInDays As Single
+    
+    sglDateDiffInDays = DateDiff("d", dtOfPromo, Date) 'get the difference in days between last promo and today
+    'the time in Rank will be = to the number of days between their last promotion and today/30.4, rounded down to the nearest 30.
+    sglDateDiffInMonths = (sglDateDiffInDays / 30.4386383333333) 'get the number of months
+    sDateDiffInMonths = CStr(sglDateDiffInMonths) 'cast months to string and get rid of decimals to round down
+    While (InStr(sDateDiffInMonths, ".")) 'if there is a decimal in the string, keep removing the last char in the string until the decimal is gone.
+        sDateDiffInMonths = Left(sDateDiffInMonths, Len(sDateDiffInMonths) - 1)
+    Wend
+    calculateTimeInRank = CInt(sDateDiffInMonths)
+End Function
+
+Function getYearsAndMonths()
+    Dim sglYears As Single
+    Dim arrList As New ArrayList
+    
+    If (iMonthsInRank <= 0) Then
+        iYearsInRank = 0
+        iMonthsInRank = 0
+    ElseIf (iMonthsInRank = 1) Then 'because if you divide 1 by x you get scientific notation, which messes things up
+        iYearsInRank = 0
+        iMonthsInRank = 1
+    Else
+        sglYears = (iMonthsInRank / 12) 'if months are more than 1, divide months by 12 to get years
+        iYearsInRank = Int(sglYears) 'round down to get rid of any decimals in the years value
+        iMonthsInRank = (iMonthsInRank Mod 12) 'get the number of months
+    End If
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' END GENERAL FUNCTIONS SECTION '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Private Sub btnAddNewStudent_Click()
+On Error Resume Next 'to skip errors with assigning null to a variable
+    Dim iYearsInRank As Integer
+    Dim iMonthsInRank As Integer
+    Dim iRecordCount1 As Integer
+    Dim iRecordCount2 As Integer
+    Dim std As New student
+    'Required fields: Full Name, Current Rank, Gender, DOB, State, date of last promotion, time in current rank, monthly rate
+    'Required fields need to check/validate: Full Name, DOB, date of last promotion
+    'Required fields we do not need to check because the input is validated by the form: Current Rank, Gender, State, time in current rank, monthly rate
+    'Non-required fields: parent name, phone number, mobile carrier, email, street address, city, zip, image path, outside training, medical, payment status, comments
+    'Non-required fields that require validation if provided: email
+
+    'First make sure that all of the required fields have a valid input value
+    boolAllGood = checkRequiredStudentInputFields()
+    If (boolAllGood = False) Then Exit Sub
+    'if required fields are all provided and valid, validate non-required fields if provided
+    boolAllGood = validateNonReqFields
+    If (boolAllGood = False) Then Exit Sub
+
+    'If this line is reached then the whole form has been validated. Proceed to assign values to student properties then add to database.
+    std.name = Me.txtName.Value
+    std.phoneNumber = getPhoneNumber 'returns phone number with 1 at beginning (for US numbers). If no number provided returns empty string.
+    std.mobileCarrier = getMobileCarrierFromANSform(std.phoneNumber) 'If no number provided or no carrier selected returns empty string.
+    std.smsEmail = getSmsGateway(std.phoneNumber) 'if phone number is blank returns ""
+    std.email = Me.txtEmail.Value
+    std.rank = Me.comboCurrentRankNewStudent.Value
+    std.promotionDate = Me.txtDateOfLastPromotion.Value
+    'get time in rank
+    iYearsInRank = Me.comboYearsInRank.Value 'this input is limited to the set.
+    iMonthsInRank = Me.comboMonthsInRank.Value 'this input is limited to the set.
+    iMonthsInRank = (iMonthsInRank + (iYearsInRank * 12)) 'convert to just months
+    std.monthsInRank = iMonthsInRank
+    std.monthlyRate = Me.txtMonthlyRate.Value
+    std.pictureFileName = Me.imgNewStudent.ControlTipText
+    std.paymentStatus = Me.txtPaymentStatus.Value
+    std.comments = Me.txtComments.Value
+    std.gender = Me.comboGender.Value
+    std.address = Me.txtAddress.Value
+    std.city = Me.comboCity.Value
+    std.state = Me.comboState.Value
+    std.zipCode = Me.txtZip.Value
+    std.DOB = Me.txtDOB.Value
+    std.outsideTraining = Me.txtOutsideTraining.Value
+    std.medicalIssues = Me.txtMedicalIssues.Value
+    std.parentName = Me.txtParentName.Value
+    'std.displayValues
+    'Note: we don't need to set the active status when adding a new student to the students table because true is the default value.
+    
+    sSQL = "INSERT INTO Students (studentName, phoneNumber, email, currentRank, promotionDate, monthsInRank, monthlyRate, picture, paymentStatus, comments, gender, address, city, state, zipCode, DOB, outsideTraining, medicalIssues, parentName, smsEmail, mobileCarrier) VALUES " & _
+     "('" & std.name & "', '" & std.phoneNumber & "', '" & std.email & "', '" & std.rank & "', #" & std.promotionDate & "#, " & std.monthsInRank & ", " & std.monthlyRate & ", '" & std.pictureFileName & "', '" & std.paymentStatus & "', '" & std.comments & "', '" & std.gender & "', '" & std.address & "', '" & std.city & "', '" & std.state & "', '" & std.zipCode & "', #" & std.DOB & "#, '" & std.outsideTraining & "', '" & std.medicalIssues & "', '" & std.parentName & "', '" & std.smsEmail & "', '" & std.mobileCarrier & "');"
+    DoCmd.SetWarnings False
+    iRecordCount1 = DCount("studentID", "Students") 'get the row count in the students table
+    DoCmd.RunSQL sSQL
+    iRecordCount2 = DCount("studentID", "Students") 'get the new count in the students table
+    'display message confirming that the new record was added, including the students name.
+    If (iRecordCount1 = iRecordCount2) Then
+        MsgBox ("There was an issue adding the student. Student NOT ADDED to database. Keep in mind that special characters are not allowed in certain fields. For instance, apostrophes are not allowed in the 'outside training' field.")
+    Else
+        Call addStudentIdToCertsTable(std.name)
+        MsgBox (sName & " successfully added to database. ")
+    End If
+End Sub
+
+Function getMobileCarrierFromANSform(phoneNumber As String) As String 'get mobile carrier from add new student form
+    getMobileCarrierFromANSform = ""
+    If phoneNumber = "" Then Exit Function
+    getMobileCarrierFromANSform = Me.comboMobileCarrier.Column(0)
+End Function
+
+Function validateNonReqFields() As Boolean
+On Error Resume Next
+'since email is the only non-required field that requires input validation we will just eval the email input.
+    Dim clr As New ColorCollection
+    Dim eml As String
+    eml = ""
+    eml = Me.txtEmail.Value
+    If (eml = "") Then
+        validateNonReqFields = True
+    Else
+        validateNonReqFields = isEmail(eml)
+        If (validateNonReqFields = False) Then
+            With Me.txtEmail
+                .SetFocus
+                .BorderColor = clr.red
+            End With
+            MsgBox "Error: invalid email address"
+        Else
+            Me.txtEmail.BorderColor = clr.grey
+        End If
+    End If
+End Function
+
+Function isEmail(sEmail As String) As Boolean
+    Dim regexEmail As New RegExp
+    regexEmail.Pattern = "(^\w+)([.]*)(\w*)[@](\w+)[.](\w+$)"
+    'explanation: ^\w+ begins with one or more letters, numbers, or underscores.
+    '[.]* may or may not include a dot (for example firstName.LastName@live.com)
+    '\w* may or may not include one or more letters, numbers, or underscores.
+    '[@] exactly one @ symbol
+    '\w+ one or more letters, numbers, or underscores.
+    '[.] exactly one dot
+    '(\w+$) ending with one or more letters, numbers, or underscores.
+    regexEmail.IgnoreCase = True
+    isEmail = regexEmail.Test(sEmail)
+End Function
+
+Function checkRequiredStudentInputFields() As Boolean
+'Required fields need to check: Full Name, DOB, date of last promotion
+'Required fields we do not need to check because the input is validated by the form: Current Rank, Gender, State, time in current rank, monthly rate
+    Dim allGood As Boolean
+    allGood = checkNewNameInput 'make sure a name was entered and is not a duplicate name already existing in the DB. Includes error messaging.
+
+    If (allGood = False) Then Exit Function
+    allGood = validateDOB(Me.txtDOB.Value) 'checks that parameter is a date and not in the future.
+    If (allGood = False) Then
+        Dim clr As New ColorCollection
+        With Me.txtDOB
+            .SetFocus
+            .BorderColor = clr.red
+        End With
+        MsgBox "error: please enter a valid date of birth. Date of birth cannot be in the future."
+        Exit Function
+    Else
+        Me.txtDOB.BorderColor = clr.grey
+    End If
+
+    allGood = Not (isFutureDate(Me.txtDateOfLastPromotion.Value)) 'form provides validation for a date, this function provides validation for not in the future.
+    If (allGood = False) Then
+        With Me.txtDateOfLastPromotion
+            .SetFocus
+            .BorderColor = clr.red
+            MsgBox "Error: date of last promotion cannot be in the future"
+        End With
+    Else
+        Me.txtDateOfLastPromotion.BorderColor = clr.grey
+    End If
+
+    checkRequiredStudentInputFields = allGood
+End Function
+
+
+Function checkNewNameInput() As Boolean 'sets the variables (sName, checkNewNameInput). If name is invalid, messagebox is done and name box is highlighted in red.
+On Error Resume Next 'in case user didn't enter a value for name, we can't assign sName = null.
+    Dim iNameExists As Integer
+    Dim criteria As String
+    Dim clr As New ColorCollection
+    sName = ""
+    sName = Me.txtName.Value
+
+    If (sName = "") Or IsNull(sName) Then
+        MsgBox "point 1: didn't enter a name."
+        checkNewNameInput = False
+        With Me.txtName
+            .SetFocus
+            .BorderColor = clr.red
+        End With
+        MsgBox ("*Name required")
+    Else
+        'check to see if this name is already in the DB. we don't want duplicates of the same name.
+        criteria = ("studentName = '" & sName & "'")
+        Call connectToDB
+        iNameExists = DCount("studentName", "Students", criteria)
+  
+        If (iNameExists = 1) Then 'if this name is already in the DB
+            checkNewNameInput = False
+            MsgBox ("The name " & sName & " already exists in the database. You are probably attempting to enter a student who has already been added. " & vbCrLf & _
+                    "If you are sure you are not creating a duplicate entry and would like to proceed, you must alter the name." & vbCrLf & _
+                    "Try adding a middle name, initial, using a nick name, or adding a suffix (i.e. 'Tim Amey Jr.')")
+            With Me.txtName
+                .SetFocus
+                .BorderColor = clr.red
+            End With
+        Else 'if name is valid and doesn't already exist in the DB
+            checkNewNameInput = True
+            Me.txtName.BorderColor = clr.grey
+        End If
+    End If
+    
+End Function
+
+
+
+Function checkPromotionDate() As Boolean
+'The input has a date mask and a default value. The only thing we need to check is that the date is not in the future.
+    Dim dtPromo As Date
+    dtPromo = Forms!Students!txtDateOfLastPromotion.Value
+    
+    If (dtPromo > Date) Then
+        checkPromotionDate = False
+        With Forms!Students!txtDateOfLastPromotion
+            .BorderColor = red
+            .SetFocus
+        End With
+        MsgBox ("Invalid promotion date. You cannot pick a date in the future.")
+    Else
+        checkPromotionDate = True
+        Forms!Students!txtDateOfLastPromotion.BorderColor = grey
+    End If
+    
+End Function
+
+Function getPhoneNumber() As String
+On Error Resume Next
+    getPhoneNumber = ""
+    getPhoneNumber = Me.txtPhoneNumber.Value 'sets phone number to value entered; otherwise, remains empty string.
+    If (getPhoneNumber <> "") Then
+        getPhoneNumber = ("1" & getPhoneNumber) '+1 for USA numbers
+    End If
+End Function
+
+Function getSmsGateway(phoneNumber As String) As String
+    getSmsGateway = ""
+    If (phoneNumber <> "") Then
+        getSmsGateway = Me.comboMobileCarrier.Column(1)
+        If (IsNull(getSmsGateway) Or getSmsGateway = "" Or getSmsGateway = "Other" Or getSmsGateway = "unknown") Then
+            'do nothing, getSmsGateway remains an empty string.
+        Else
+            'we will put together the phone number & gateway. but before we do that, we need to remove parenthesis, space, and dash from phone number.
+            If InStr(phoneNumber, "(") Then 'remove "("
+                phoneNumber = Replace(phoneNumber, "(", "", vbTextCompare)
+            End If
+            
+            If InStr(phoneNumber, ")") Then 'remove ")"
+                phoneNumber = Replace(phoneNumber, ")", "")
+            End If
+            
+            Do While InStr(phoneNumber, "-")  'remove dash
+                phoneNumber = Replace(phoneNumber, "-", "")
+            Loop
+            
+            Do While (InStr(phoneNumber, " "))
+                phoneNumber = Replace(phoneNumber, " ", "")
+            Loop
+
+            getSmsGateway = (phoneNumber & getSmsGateway)
+            'MsgBox (getSmsGateway)
+        End If
+    End If
+End Function
+
+
+
+Function addStudentIdToCertsTable(studentName As String) 'takes the variable (sName), sets the variable iStudentID
+    Dim iStudentID As Integer
+    iStudentID = getStudentIdFromName(studentName) 'takes the variable (sName), sets the variable iStudentID
+    sSQL = ("INSERT INTO Certs (StudentID) VALUES (" & iStudentID & ")")
+    DoCmd.RunSQL sSQL
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
