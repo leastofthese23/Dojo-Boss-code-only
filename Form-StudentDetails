@@ -1,0 +1,857 @@
+Option Compare Database
+    
+Dim sName As String
+Dim sPhoneNumber As String
+Dim sEmail As String
+Dim sComments As String
+Dim sSQL As String
+Dim sStudentName As String
+Dim sRankTimeReq As String
+Dim sMonthsToNextRank As String
+Dim sDateToday As String
+Dim sDateDiffInMonths As String
+Dim sPromoDate As String
+Dim sYearsInRank As String
+Dim sTimeToNextPromo As String
+Dim sMonthsInRank As String
+Dim sStudentName1 As String
+Dim sStudentRank As String
+Dim sYears As String
+Dim sRelativeFilePath As String
+Dim sFullFilePath As String
+Dim sSpaceSeperatedFilePath As String
+Dim sPaymentStatus As String
+Dim sRank As String
+Dim sNewRank As String
+Dim sParentName As String
+Dim condition As String
+Dim sMobileCarrier As String
+Dim sDOB As String
+Dim sAddress As String
+Dim sCity As String
+Dim sState As String
+Dim sZip As String
+Dim sSmsEmail As String
+Dim sOutsideTraining As String
+Dim sMedical As String
+
+Dim bytYearsInRank As Byte
+Dim bytWeeksInRank As Byte
+Dim bytTimeRequirement As Byte
+Dim bytMonthsToNextPromo As Byte
+
+Dim sglMonthlyRate As Single
+Dim sglDateDiffInDays As Single
+Dim sglYears As Single
+Dim sglDateDiffInMonths As Single
+Dim sglPercentageOfReqFulfilled As Single
+    
+Dim iRecordCount1 As Integer
+Dim iRecordCount2 As Integer
+Dim iStudentProgress As Integer
+Dim iDateDiffInMonths As Integer
+Dim iDateDiffInYears As Integer
+Dim iYearsInRank As Integer
+Dim iMonths As Integer
+Dim iYears As Integer
+Dim iMonthsInRank As Integer
+Dim iRankMonthReq As Integer
+Dim iMonthsCompleted As Integer
+Dim iMonthsRemaining As Integer
+Dim iInnerWidth As Integer
+Dim iStudentID As Integer
+Dim iAge As Integer
+
+Dim boolValidDOB As Boolean
+Dim boolAllGood As Boolean
+
+Dim lColor As Long
+
+Dim dtOfPromo As Date
+Dim dtToday As Date
+Dim dtDOB As Date
+
+Dim dbs As Database
+Dim rs As Recordset
+Dim rs2 As Recordset
+
+
+Public Sub loadFromCallingPage(studentName As String)
+    Me.comboSelectedStudent.Value = studentName
+    Call refreshForm
+End Sub
+
+
+Function convertYearsAndMonthsToYears()
+    iMonths = (iMonths + (years * 12))
+End Function
+
+Private Sub btnAttendance_Click()
+    DoCmd.OpenForm formName:="AttendanceTracking"
+End Sub
+
+
+
+Function setTheProgressBar(std As student, iTimeRankReq As Integer)
+    Dim innerWidth As Integer
+    Dim beltColor As Long
+    Dim controlLength As Single
+    
+    controlLength = 33.8
+    iInnerWidth = getProgressForBar(std.monthsInRank, iTimeRankReq, controlLength)
+    beltColor = getStudentColor(std.rank)
+    Me.lblInnerProgressBar.Width = iInnerWidth
+    Me.lblInnerProgressBar.BackColor = beltColor
+    
+    'MsgBox "innerWidth = " & innerWidth & " beltColor = " & beltColor
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+Private Sub btnBack_Click()
+    DoCmd.OpenForm formName:="Students"
+End Sub
+
+Private Sub btnCalendar_Click()
+    FollowHyperlink "http://ekkc-nw.com/class-calendar/"
+End Sub
+
+Private Sub btnFinancials_Click()
+    DoCmd.OpenForm formName:="Financials"
+End Sub
+
+Private Sub btnForms_Click()
+    DoCmd.OpenForm formName:="DojoForms"
+End Sub
+
+Private Sub btnGear_Click()
+    DoCmd.OpenForm formName:="Settings"
+End Sub
+
+Private Sub btnHome_Click()
+    DoCmd.OpenForm formName:="Home"
+End Sub
+
+Private Sub btnMessaging_Click()
+    DoCmd.OpenForm formName:="Messaging"
+End Sub
+
+Private Sub btnRefresh_Click()
+    Call comboSelectedStudent_Click
+End Sub
+
+Function getParentFromTxtBox() As String
+On Error Resume Next 'in case null value is encountered
+    getParentFromTxtBox = "" 'in case text box is blank, will return empty string.
+    getParentFromTxtBox = Me.txtParentName.Value
+End Function
+
+Function getMedicalFromTxtBox() As String
+On Error Resume Next 'in case null value is encountered
+    getMedicalFromTxtBox = "" 'in case text box is blank, will return empty string.
+    getMedicalFromTxtBox = Me.txtMedicalIssues.Value
+End Function
+
+Function getCityFromTxtBox() As String
+On Error Resume Next 'in case null value is encountered
+    getCityFromTxtBox = "" 'in case text box is blank, will return empty string.
+    getCityFromTxtBox = Me.comboCity.Value
+End Function
+
+Function getCommentsFromTxt() As String
+On Error Resume Next 'in case null value is encountered
+    getCommentsFromTxt = "" 'in case text box is blank, will return empty string.
+    getCommentsFromTxt = Me.txtComments.Value
+End Function
+
+Function getPaymentStatusFromTxt() As String
+On Error Resume Next 'in case null value is encountered
+    getPaymentStatusFromTxt = "" 'in case text box is blank, will return empty string.
+    getPaymentStatusFromTxt = Me.txtPaymentStatus.Value
+End Function
+
+Function getNameFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+    sName = "" 'in case text box is blank, will return empty string.
+    sName = Me.txtName.Value
+    If (sName = "") Or IsNull(sName) Then
+        boolAllGood = False
+        Dim sTitle As String
+        Dim sMainMessage As String
+        sTitle = "Error"
+        sMainMessage = "You must enter a value for student name."
+        MsgBox sMainMessage, vbOKOnly, sTitle
+    End If
+    getNameFromTextBox = sName
+End Function
+
+Function getPhoneNumberFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+    getPhoneNumberFromTextBox = "" 'in case text box is blank, will return empty string.
+    getPhoneNumberFromTextBox = Me.txtPhoneNumber.Value
+End Function
+Function getOutsideTrainingFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+    getOutsideTrainingFromTextBox = "" 'in case text box is blank, will return empty string.
+    getOutsideTrainingFromTextBox = Me.txtOutsideTraining.Value
+End Function
+Function getEmailFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+    getEmailFromTextBox = "" 'in case text box is blank, will return empty string.
+    getEmailFromTextBox = Me.txtEmail.Value
+End Function
+
+Function getZipFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+    getZipFromTextBox = "" 'in case text box is blank, will return empty string.
+    getZipFromTextBox = Me.txtZip.Value
+End Function
+Function getAddressFromTextBox() As String
+On Error Resume Next 'in case null value is encountered
+     getAddressFromTextBox = "" 'in case text box is blank, will return empty string.
+     getAddressFromTextBox = Me.txtAddress.Value
+End Function
+
+
+Function setSmsEmail() 'gets values from form elements containing phone number and mobile carrier sms, sets the variable sSmsEmail
+    sPhoneNumber = Me.txtPhoneNumber.Value
+
+    'remove any special characters from phone number
+    If InStr(sPhoneNumber, " ") Then 'remove space
+        sPhoneNumber = Replace(sPhoneNumber, " ", "")
+    End If
+    If InStr(sPhoneNumber, "(") Then 'remove "("
+        sPhoneNumber = Replace(sPhoneNumber, "(", "")
+    End If
+    If InStr(sPhoneNumber, ")") Then 'remove ")"
+        sPhoneNumber = Replace(sPhoneNumber, ")", "")
+    End If
+    If InStr(sPhoneNumber, "-") Then 'remove "-"
+        sPhoneNumber = Replace(sPhoneNumber, "-", "")
+    End If
+    
+    'see if the phone number already has a 1 at the beginning. if so, do nothing; otherwise, add 1 at the beginning.
+    Dim sFirstChar As String
+    sFirstChar = Left(sPhoneNumber, 1)
+    If (sFirstChar = "1") Then
+        'do nothing
+    Else
+        sPhoneNumber = ("1" & sPhoneNumber)
+    End If
+    
+    sSmsCarrier = Me.comboMobileCarrier.Value
+    Call connectToDB
+    
+    sSQL = "SELECT m.[smsGateway] FROM MobileCarriers AS m WHERE m.[carrier] = '" & sSmsCarrier & "';"
+    'MsgBox (sSQL)
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        sSmsCarrier = rs.Fields(0)
+        'MsgBox ("rs is greater than 0. sSmsCarrier = " & sSmsCarrier)
+    Else
+        sSmsCarrier = ""
+        'MsgBox ("rs is 0. sSmsCarrier = " & sSmsCarrier)
+    End If
+    
+    sSmsEmail = (sPhoneNumber & sSmsCarrier)
+End Function
+
+Function getStudentIdMatchingName() 'takes the variable sStudentName, sets the variable iStudentID 'TODO: use shared function instead
+    Call connectToDB
+    sSQL = "SELECT s.[studentID] FROM Students AS s WHERE s.[studentName] = '" & sStudentName & "';"
+        
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If (rs.RecordCount > 0) Then
+        rs.MoveFirst
+        iStudentID = rs.Fields(0)
+    Else
+        
+    End If
+End Function
+
+Function connectToDB()
+    Set dbs = CurrentDb
+End Function
+
+Function getMonthsInRankFromCombo() 'takes variables iYears iMonths, sets iMonths
+    sMonths = Me.comboMonthsInRank.Value
+    If (IsNumeric(sMonths)) Then
+        If InStr(sMonths, ".") Then 'check to see if it contains a decimal
+            MsgBox ("you must enter an integer value between 0 and 600 for Months in rank (no decimals)")
+        Else
+            'is numeric and no decimals. test to see if in between 0 and 600
+            iMonths = CInt(sMonths)
+            If (iMonths < 0 Or iMonths > 600) Then
+                MsgBox ("you must enter an integer value 0-600 for Months in rank")
+            Else: 'do nothing, iMonths is set.
+            End If
+        End If
+    Else: MsgBox ("you must enter an integer value 0-600 for Months in rank")
+    End If
+End Function
+
+Function convertYearsAndMonthsToMonths()
+    iMonths = (iMonths + (iYears * 12))
+End Function
+
+Function refreshForm()
+'On Error Resume Next
+    Call comboSelectedStudent_Click
+    Me.comboSelectedStudent.Requery
+End Function
+
+Function getYearsInRankFromCombo() 'sets iYears
+    sYears = Me.comboYearsInRank.Value
+    If (IsNumeric(sYears)) Then
+        If InStr(sYears, ".") Then 'check to see if it contains a decimal
+            MsgBox ("you must enter an integer value between 0 and 99 for years in rank (no decimals)")
+        Else
+            'is numeric and no decimals. test to see if in between 0 and 99
+            iYears = CInt(sYears)
+            If (iYears < 0 Or iYears > 99) Then
+                MsgBox ("you must enter an integer value 0-99 for years in rank")
+            Else: 'do nothing, iYears is set.
+            End If
+        End If
+    Else: MsgBox ("you must enter an integer value 0-99 for years in rank")
+    End If
+End Function
+
+Function getPromoDateFromTxt() As Date 'gets the date from the text box txtDateOfLastPromotion
+    If Not (IsDate(Me.txtDateOfLastPromotion.Value)) Then
+        MsgBox ("'" & Me.txtDateOfLastPromotion.Value & "' is not a valid date. " & vbCrLf & _
+                "If the student does not have any promotion date, enter the date when he/she began training as a white belt.") 'if no valid previous promotion date was entered, send error msg to the user.
+    Else
+        getPromoDateFromTxt = CDate(Me.txtDateOfLastPromotion.Value) 'get the date from the text box and cast it to a date variable
+    End If
+End Function
+
+Private Sub btnSaveChanges_Click()
+'On Error GoTo ErHandla
+    Dim sActiveStatus As String
+    
+    boolAllGood = True 'remains true until an error is encountered.
+    iStudentID = getStudentIdFromCombo
+        
+    sName = getNameFromTextBox 'also sets the variable boolAllGood. includes error messaging.
+    If (boolAllGood = True) Then
+        sPhoneNumber = getPhoneNumberFromTextBox
+        If (sPhoneNumber <> "") Then
+            sMobileCarrier = Me.comboMobileCarrier.Value
+            Call setSmsEmail 'gets values from form elements containing phone number and mobile carrier sms, sets the variable sSmsEmail
+        Else
+            sMobileCarrier = ""
+        End If
+        sEmail = getEmailFromTextBox
+        sStudentRank = Me.comboStudentRank.Value 'limited to set
+        dtOfPromo = getPromoDateFromTxt 'also sets the variable boolAllGood. includes error messaging.
+        If (boolAllGood = True) Then
+            Call getYearsInRankFromCombo 'sets iYears.
+            Call getMonthsInRankFromCombo 'sets iMonths.
+            Call convertYearsAndMonthsToMonths 'takes variables iYears iMonths, sets the variable iMonths
+            sglMonthlyRate = Me.txtRate.Value 'this text box has an input mask, so no worries about bad input.
+            sPaymentStatus = getPaymentStatusFromTxt
+            sComments = getCommentsFromTxt
+            sGender = Me.comboGender.Value 'limited to set
+            sAddress = getAddressFromTextBox
+            sCity = getCityFromTxtBox
+            sState = Me.comboState.Value 'limited to set
+            sZip = getZipFromTextBox
+            sDOB = Me.txtDOB.Value 'this text box has an input mask, so no worries about bad input.
+            sOutsideTraining = getOutsideTrainingFromTextBox
+            sMedicalIssues = getMedicalFromTxtBox
+            sParentName = getParentFromTxtBox
+            sActiveStatus = Me.comboActive.Value 'limited to set
+            'create SQL statement
+            'Update table_name SET column1 = value1, column2 = value2, ...WHERE condition;
+        
+            sSQL = "UPDATE Students SET [studentName] = '" & sName & "', [phoneNumber] = '" & sPhoneNumber & "', [email] = '" & sEmail & "', [currentRank] = '" & sStudentRank & "', " & _
+                   "[promotionDate] = #" & dtOfPromo & "#, [monthsInRank] = " & iMonths & ", [monthlyRate] = " & sglMonthlyRate & ", [paymentStatus] = '" & sPaymentStatus & "', " & _
+                   "[comments] = '" & sComments & "', [gender] = '" & sGender & "', [address] = '" & sAddress & "', [city] = '" & sCity & "', [state] = '" & sState & "', " & _
+                   "[zipCode] = '" & sZip & "', [DOB] = #" & sDOB & "#, [outsideTraining] = '" & sOutsideTraining & "', [medicalIssues] = '" & sMedicalIssues & "', [parentName] = '" & sParentName & "', " & _
+                   "[smsEmail] = '" & sSmsEmail & "', [mobileCarrier] = '" & sMobileCarrier & "', [active] = '" & sActiveStatus & "' WHERE Students.[studentID] = " & iStudentID & ""
+            
+            'MsgBox ("sSQL = '" & sSQL & "'")
+            DoCmd.RunSQL sSQL
+            'display message confirming that the new record was added, including the students name.
+        
+            If (sActiveStatus = "false") Then 'need to set record source in combo box to include inactive students.
+                sSQL = "SELECT s.[studentID], s.[studentName] FROM Students AS s ORDER BY studentName;"
+                Me.comboSelectedStudent.RowSource = sSQL
+            End If
+            Me.comboSelectedStudent.Requery
+            Me.Refresh
+            Me.comboSelectedStudent.SetFocus: Me.comboSelectedStudent.SelText = sName
+            Call comboSelectedStudent_Click
+            Forms!Students!btnRefresh.SetFocus 'refresh the students form
+            Me.btnSaveChanges.SetFocus 'then bring the focus back to where the user last clicked
+            MsgBox (sName & "'s info successfully updated. ")
+        End If
+    End If
+
+Exit Sub
+ErHandla:
+    MsgBox ("There was an issue updating the student info. Student info was NOT updated. If you do not understand why this error is occurring please take a screenshot and report it to a Dojo Boss administrator." & vbCrLf & "Error description: " & Err.Description)
+
+End Sub
+
+Function getStudentIdFromCombo() As Integer
+On Error Resume Next
+    i = 0
+    i = Me.comboSelectedStudent.Column(0) 'this works when a student is selected manually.
+    If (i = 0) Or IsNull(i) Then  'this must be done if the student name was entered from the calling page.
+        sStudentName = Me.comboSelectedStudent.Value
+        Call getStudentIdMatchingName 'takes the variable sStudentName, sets the variable i
+    End If
+    getStudentIdFromCombo = i
+End Function
+
+Private Sub btnStudents_Click()
+    DoCmd.OpenForm formName:="Students"
+End Sub
+
+Private Sub btnTimeInRank_Click()
+    DoCmd.OpenForm formName:="RankReq"
+End Sub
+
+Private Sub checkViewInactive_Click()
+    Dim boolViewInactive As Boolean
+
+    boolViewInactive = Me.checkViewInactive.Value
+    'MsgBox ("boolViewInactive = " & boolViewInactive)
+    If (boolViewInactive = True) Then
+        sSQL = "SELECT s.[studentID], s.[studentName] FROM Students AS s ORDER BY studentName;"
+    Else
+        sSQL = "SELECT s.[studentID], s.[studentName] FROM Students AS s WHERE active = 'true' ORDER BY studentName; "
+    End If
+    
+    Me.comboSelectedStudent.RowSource = sSQL
+End Sub
+
+Private Sub comboSelectedStudent_Click()
+'On Error Resume Next
+    Dim std As New student
+    
+    std.name = Me.comboSelectedStudent.Value 'works when name was inserted from calling form
+    If IsNumeric(std.name) Then
+        std.name = Me.comboSelectedStudent.Column(1) 'works when name is selected by user interface
+    End If
+
+    std.GetStudentInfo (std.name)
+    Call fillStudentDetailsFormWithStudentInfo(std)
+End Sub
+
+Function fillStudentDetailsFormWithStudentInfo(std As student)
+    Dim iReqMonths As Integer
+    Dim iMonthsToNextPromo As Integer
+    
+    Me.lblStudentName.Caption = std.name
+    Me.imgStudent.picture = (Application.CurrentProject.Path & "\images\" & std.pictureFileName)
+    Me.txtName.Value = std.name
+    Me.comboStudentRank.Value = std.rank
+    iReqMonths = getTimeRequirementForCurrentRank(std.rank)
+    Me.txtRankTimeReq.Value = iReqMonths & " months"
+    'display nearest possible promotion
+    iMonthsToNextPromo = getMonthsRemaining(std.monthsInRank, iReqMonths)
+    If (iMonthsToNextPromo = 0) Then
+        Me.txtNearestPossiblePromo.Value = "now"
+    Else
+        Me.txtNearestPossiblePromo.Value = iMonthsToNextPromo & " months"
+    End If
+    'display years and months in rank in combo boxes
+    Me.comboYearsInRank.Value = 0
+    Me.comboMonthsInRank.Value = std.monthsInRank
+    
+    Call setTheProgressBar(std, iReqMonths)
+    Me.txtPaymentStatus.Value = std.paymentStatus
+    Me.comboGender.Value = std.gender
+    Me.txtRate.Value = std.monthlyRate
+    Me.txtParentName.Value = std.parentName
+    Me.comboMobileCarrier.Value = std.mobileCarrier
+    Me.txtDOB.Value = std.DOB
+    Me.txtAge.Value = getAgeFromDOB(std.DOB)
+    Me.txtAddress.Value = std.address
+    Me.comboCity.Value = std.city
+    Me.comboState.Value = std.state
+    Me.txtZip.Value = std.zipCode
+    Me.txtOutsideTraining.Value = std.outsideTraining
+    Me.txtMedicalIssues.Value = std.medicalIssues
+    Me.txtPhoneNumber.Value = std.phoneNumber
+    Me.txtEmail.Value = std.email
+    Me.txtDateOfLastPromotion.Value = std.promotionDate
+    Me.txtComments = std.comments
+    Me.comboActive.Value = std.active
+    Call showRankReq(std.rank) 'gets the variable sRank from the text box, displays rank req in subform
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Private Sub comboStudentRank_Click()
+    sStudentRank = Me.comboStudentRank.Value
+    Call getTimeRequirementForCurrentRank 'takes the variable sStudentRank, sets the variable iMonths
+    Call putTimeRequirementForCurrentRankInTextBox 'TODO: this function has been replaced.
+End Sub
+
+Private Sub imgStudent_Click()
+    Call imgNewStudent_Click
+End Sub
+Private Sub imgNewStudent_Click()
+    sError = "image"
+    sStudentName = Me.lblStudentName.Caption
+    On Error GoTo ErrorHandler
+    Dim varFile As Variant
+    Dim sFileName As String
+    Dim fDialog As Object
+    Set fDialog = Application.FileDialog(3)
+    
+    'MsgBox ("Please ensure you are uploading your image from the images folder. Images selected/uploaded from other folders will not be saved.")
+    With fDialog
+        AllowMultiSelect = False
+        .InitialFileName = (Application.CurrentProject.Path & "\images\")
+    
+        If fDialog.Show = True Then
+            For Each varFile In .SelectedItems
+                sFilePathAndName = varFile
+                'MsgBox ("'" & sFilePathAndName & "'")
+                sSpaceSeperatedFilePath = Replace(sFilePathAndName, "\", " ")
+                'MsgBox (sSpaceSeperatedFilePath)
+                'sSpaceSeperatedFilePath = "images"
+                
+                If InStr(sSpaceSeperatedFilePath, "images") Then
+                    'MsgBox ("images is in string")
+                    Me.imgStudent.picture = sFilePathAndName
+                    'get relative image path
+                    indexOfImages = InStr(1, sFilePathAndName, "images")
+                    sRelativeFilePath = Right(sFilePathAndName, Len(sFilePathAndName) - indexOfImages - 6)
+                    'update the DB
+                    sSQL = "Update Students SET Students.[picture] = '" & sRelativeFilePath & "' WHERE Students.[studentName] = '" & sStudentName & "';"
+                    DoCmd.RunSQL sSQL
+                    'MsgBox ("picture saved. ")
+                Else: MsgBox ("You must upload/select an image from the IMAGES FOLDER. Images selected/uploaded from other folders will not be saved")
+                      Call imgNewStudent_Click
+                End If
+            Next
+        End If
+    End With
+    'MsgBox "file choosen = " & f.Type
+Exit Sub
+ErrorHandler:
+    If (sError = "image") Then
+        MsgBox ("image error occurred. Make sure you select an image file from the images folder. ")
+    ElseIf (sError = "student name") Then
+          MsgBox ("student error occurred")
+    Else: MsgBox ("And unknown error occurred. ")
+    End If
+
+End Sub
+
+
+
+Private Sub lblChangeImage_Click()
+    Call imgNewStudent_Click
+End Sub
+
+Private Sub lblPromoteNow_Click()
+    Dim sMessage As String
+    Dim userSelection As Integer
+    
+    sRank = Me.comboStudentRank.Value
+
+    If (sRank = "10th kyu - white") Then
+        sNewRank = "9th kyu - blue I"
+    ElseIf (sRank = "9th kyu - blue I") Then
+        sNewRank = "8th kyu - blue II"
+    ElseIf (sRank = "8th kyu - blue II") Then
+        sNewRank = "7th kyu - blue III"
+    ElseIf (sRank = "7th kyu - blue III") Then
+        sNewRank = "6th kyu - green I"
+    ElseIf (sRank = "6th kyu - green I") Then
+        sNewRank = "5th kyu - green II"
+    ElseIf (sRank = "5th kyu - green II") Then
+        sNewRank = "4th kyu - green III"
+    ElseIf (sRank = "4th kyu - green III") Then
+        sNewRank = "3rd kyu - brown I"
+    ElseIf (sRank = "3rd kyu - brown I") Then
+        sNewRank = "2nd kyu - brown II"
+    ElseIf (sRank = "2nd kyu - brown II") Then
+        sNewRank = "1st kyu - brown III"
+    ElseIf (sRank = "1st kyu - brown III") Then
+        sNewRank = "Shodan - black I"
+    ElseIf (sRank = "Shodan - black I") Then
+        sNewRank = "Nidan - black II"
+    ElseIf (sRank = "Nidan - black II") Then
+        sNewRank = "Sandan - black III"
+    ElseIf (sRank = "Sandan - black III") Then
+        sNewRank = "Yandan - black IV"
+    ElseIf (sRank = "Yandan - black IV") Then
+        sNewRank = "Godan - black V"
+    ElseIf (sRank = "Godan - black V") Then
+        sNewRank = "Rokudan - black VI"
+    ElseIf (sRank = "Rokudan - black VI") Then
+        sNewRank = "Shichidan - black VII"
+    ElseIf (sRank = "Shichidan - black VII") Then
+        sNewRank = "Hachidan - black VIII"
+    ElseIf (sRank = "Hachidan - black VIII") Then
+        sNewRank = "Kudan - black IX"
+    ElseIf (sRank = "Kudan - black IX") Then
+        sNewRank = "Chuck Norris"
+    End If
+    
+    sMessage = ("Student will be promoted from '" & sRank & "' to '" & sNewRank & "'. Time in rank will be set to 0 months." & vbCrLf & _
+                "(You can adjust the time in rank after the student is promoted)")
+    userSelection = MsgBox(sMessage, vbOKCancel, "confirm promotion")
+    
+    If (userSelection = vbOK) Then
+        Call promoteStudentAndUpdateTable 'takes the variable sNewRank
+    Else
+        'MsgBox ("The Cancel button was clicked")
+    End If
+
+End Sub
+
+Function promoteStudentAndUpdateTable() 'takes the variable sNewRank
+    dtToday = Date
+    sStudentNameOrID = Me.comboSelectedStudent.Value 'sometimes this comes out as the ID, sometimes it's a name :p
+    
+    If IsNumeric(sStudentNameOrID) Then
+        iStudentID = sStudentNameOrID
+        sSQL = "UPDATE Students SET currentRank = '" & sNewRank & "', promotionDate = #" & dtToday & "#, monthsInRank = 0 WHERE studentID = " & iStudentID & ";"
+    Else 'this is the name
+        sStudentName = sStudentNameOrID
+        sSQL = "UPDATE Students SET currentRank = '" & sNewRank & "', promotionDate = #" & dtToday & "#, monthsInRank = 0 WHERE studentName = '" & sStudentName & "';"
+    End If
+    
+    'MsgBox (sSQL)
+    DoCmd.RunSQL sSQL
+    Call refreshForm
+End Function
+
+Private Sub lblShowAllRankReq_Click()
+    sSQL = "SELECT * FROM RankRequirements"
+    Me.subformRankReq.Form.RecordSource = sSQL
+    Me.subformRankReq.Requery
+    Me.subformRankReq.Height = 6500
+End Sub
+
+Private Sub lblShowRankReqOnlyThisStudent_Click()
+    Dim studentName As String
+    Dim studentRank As String
+    
+    studentName = Me.lblStudentName.Caption
+    studentRank = getStudentRankFromName(studentName)
+    Call showRankReq(studentRank)
+End Sub
+
+Private Sub lblViewCerts_Click()
+    On Error Resume Next
+    DoCmd.OpenForm formName:="Certs"
+    Call setStudentNameOnCertsForm
+    Call Forms("Certs").refreshForm
+End Sub
+
+Private Function setStudentNameOnCertsForm()
+    sStudentName = Me.lblStudentName.Caption
+    Forms!Certs!comboSelectedStudent.Value = sStudentName
+    Forms!Certs!comboSelectedStudent.SetFocus
+    Forms!Certs!comboSelectedStudent.SelText = sStudentName
+
+    Forms!Certs!lblStudentName.Caption = sStudentName
+End Function
+
+Private Sub txtDateOfLastPromotion_AfterUpdate()
+    On Error Resume Next
+    Set dbs = CurrentDb
+    'get the last promotion date entered by user in form.
+    If (IsNull(Me.txtDateOfLastPromotion.Value) Or Me.txtDateOfLastPromotion.Value = "" Or Not (IsDate(Me.txtDateOfLastPromotion.Value))) Then
+        MsgBox ("'" & Me.txtDateOfLastPromotion.Value & "' is not a valid date. " & vbCrLf & _
+                "If the student does not have any promotion date, enter the date when he/she began training as a white belt.") 'if no valid previous promotion date was entered, send error msg to the user.
+    Else
+        dtOfPromo = CDate(Me.txtDateOfLastPromotion.Value) 'get the date from the text box and cast it to a date variable
+        Call calculateTimeInRankAndFillComboBoxes
+    End If
+End Sub
+
+Function calculateTimeToNextPossiblePromoAndFillComboBoxes()
+    Call getTimeToNextPossiblePromo 'sets the variable iMonthsRemaining via the calculateTimeToNextPossiblePromo Function
+    iMonths = iMonthsRemaining ': MsgBox ("iMonths = " & iMonths)
+    Call getYearsAndMonths 'takes variable iMonths and spits out iYears iMonths
+    MsgBox ("iYears = " & iYears & ". iMonths = " & iMonths)
+End Function
+
+Function calculateTimeInRankAndFillComboBoxes()
+    Call getTheDifferenceBetweenLastPromoAndToday 'sets the variable iMonths
+    Call getYearsAndMonths 'takes iMonths variable and spits out iYears iMonths
+    Call putYearMonthDifferenceInComboBoxes 'takes the variables (iYears, iMonths), displays them in comboYearsInRank & comboMonthsInRank
+End Function
+
+Function getTimeToNextPossiblePromo()
+    Call getCurrentRankForNewStudent 'sets the variable sStudentRank
+    Call getTimeRequirementForCurrentRank 'sets the variable iMonths
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    'MsgBox ("time req for current rank = " & iMonths & " months")
+    Call getMonthsInRankFromComboBoxes 'sets the variable iMonthsCompleted
+    'MsgBox ("months in rank already = " & iMonthsCompleted)
+    Call calculateTimeToNextPossiblePromo 'sets the variable iMonthsRemaining
+    'MsgBox ("time to next possible promo is " & iMonthsRemaining & " months")
+End Function
+ '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Function getCurrentRankForNewStudent() 'sets the variable sStudentRank
+    sStudentRank = Me.comboStudentRank.Value
+End Function
+
+Function calculateTimeToNextPossiblePromo()
+    iMonthsRemaining = (iMonths - iMonthsCompleted)
+End Function
+
+Function getPercentageOfReqFulfilled()
+    sglPercentageOfReqFulfilled = (iMonthsCompleted / iRankMonthReq)
+End Function
+
+Function getMonthsInRankFromComboBoxes() ' sets the variable iMonthsComplete (gets it from the combo boxes on new student entry)
+    iYearsInRank = Me.comboYearsInRank.Value
+    iMonthsCompleted = Me.comboMonthsInRank.Value
+    'MsgBox ("iYearsInRank = " & iYearsInRank & vbCrLf & "iMonthsCompleted = " & iMonthsCompleted)
+    iMonthsCompleted = (iMonthsCompleted + (iYearsInRank * 12))
+    'MsgBox ("iMonthsCompleted = " & iMonthsCompleted)
+End Function
+
+Function getTheDifferenceBetweenLastPromoAndToday()
+    dtToday = Date 'get today's date
+    sglDateDiffInDays = DateDiff("d", dtOfPromo, dtToday) 'get the difference in days between last promo and today
+    'the time in Rank will be = to the number of days between their last promotion and today/30.4, rounded down to the nearest 30.
+    sglDateDiffInMonths = (sglDateDiffInDays / 30.4386383333333)      'get the number of months
+    sDateDiffInMonths = CStr(sglDateDiffInMonths) 'cast months to string and get rid of decimals to round down
+    While (InStr(sDateDiffInMonths, ".")) 'if there is a decimal in the string, keep removing the last char in the string until the decimal is gone.
+        sDateDiffInMonths = Left(sDateDiffInMonths, Len(sDateDiffInMonths) - 1)
+    Wend
+    iMonths = CInt(sDateDiffInMonths)
+End Function
+
+Function getYearsAndMonths() 'takes iMonths (0 to infinity) and converts it to years and months
+    If (iMonths <= 0) Then 'if iMonths is 0 or less than 0
+        iYears = 0: iMonths = 0
+    ElseIf (iMonths = 1) Then 'because if you divide 1 by x you get scientific notation, which messes things up
+        iYears = 0: iMonths = 1
+    Else
+        sglYears = (iMonths / 12) 'if months are more than 1, divide months by 12 to get years
+        'MsgBox ("sglYears = " & sglYears)
+        'get rid of any decimals in the years value
+        sYears = CStr(sglYears)
+        While (InStr(sYears, ".")) 'if there is a decimal in years the string, keep removing the last char in the string until the decimal is gone.
+            sYears = Left(sYears, Len(sYears) - 1)
+        Wend
+        'MsgBox ("sYears = " & sYears)
+        iYears = CInt(sYears)
+        'MsgBox ("iYears = " & iYears)
+        
+        'get the number of months - years
+        iMonths = (iMonths - (iYears * 12))
+    End If
+End Function
+
+Function putYearMonthDifferenceInComboBoxes() 'takes the variables (iYears, iMonths), displays them in comboYearsInRank & comboMonthsInRank
+    Me.comboYearsInRank.Value = iYears
+    Me.comboMonthsInRank.Value = iMonths
+End Function
+ 
+Private Sub txtDOB_LostFocus()
+    Call validateDOB 'sets the variables (boolValidDOB, dtDOB, dtToday)
+    If (boolValidDOB = True) Then
+        Me.txtAge.Value = getAgeFromDOB(dtDOB)
+    Else: MsgBox ("Invalid date of birth. The date selected cannot be after today's date. ")
+    End If
+End Sub
+
+Function validateDOB() 'sets the variables (boolValidDOB, dtDOB, dtToday)
+On Error Resume Next
+    If IsNull(Me.txtDOB.Value) Then
+        boolValidDOB = False
+    Else
+        dtDOB = Me.txtDOB.Value
+        dtToday = Date
+        If (dtDOB > dtToday) Then
+            boolValidDOB = False
+        Else: boolValidDOB = True
+        End If
+    End If
+End Function
+
+Private Sub txtNearestPossiblePromo_Click()
+    'MsgBox "This is a read-only field. To change the value use the 'time in current rank' combo boxes below."
+    'Me.comboMonthsInRank.SetFocus
+End Sub
+
+Private Sub txtRankTimeReq_Click()
+    MsgBox "This field is read only. If you wish to edit the time requirements for ranks please open the rank requirements page."
+End Sub
+
+
+Function showRankReq(sRank As String) 'displays rank req in subform
+On Error Resume Next
+    Dim ranks As New RanksCollection
+
+    sRank = ranks.convertRankToRankReq(sRank)
+    sSQL = "SELECT * FROM RankRequirements WHERE RankRequirements.[rank] = '" & sRank & "';"
+    Me.subformRankReq.Form.RecordSource = sSQL
+    Me.subformRankReq.Requery
+    Me.subformRankReq.Height = 1200
+End Function
+
+
+
+Private Sub txtViewCerts_Click()
+    On Error Resume Next
+    DoCmd.OpenForm formName:="Certs"
+    Call setStudentNameOnCertsForm
+    Call Forms("Certs").refreshForm
+End Sub
+
+
