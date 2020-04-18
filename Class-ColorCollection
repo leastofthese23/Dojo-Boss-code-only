@@ -1,0 +1,26 @@
+Option Compare Database
+
+Public white As Long
+Public blue As Long
+Public green As Long
+Public brown As Long
+Public black As Long
+Public red As Long
+Public grey As Long
+Public darkGrey As Long
+
+Private Sub Class_Initialize()
+    white = 16186620
+    blue = 12349952
+    green = 5553172
+    brown = 3234443
+    black = 2500134
+    red = 255
+    grey = 14277081
+    darkGrey = 10921638
+End Sub
+
+'How to use in other modules:
+'Dim clr As New ColorsCollection
+'show user where they entered invalid input:
+'Me.txtEmail.BorderColor = clr.red
