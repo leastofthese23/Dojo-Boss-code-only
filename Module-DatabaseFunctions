@@ -1,0 +1,57 @@
+Option Compare Database
+
+Function getTimeRequirementForCurrentRank(rank As String) As Integer 'queries the database table "Ranks" for time rank requirement info.
+'On Error Resume Next
+    Dim sSQL As String
+    Dim iMonths As Integer
+    Dim dbs As Database
+    Dim rs As Recordset
+    
+    Set dbs = CurrentDb
+    
+    sSQL = "SELECT r.[monthReq] FROM Ranks as r WHERE r.[rank] = '" & rank & "';"
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        iMonths = rs.Fields(0)
+    Else
+        iMonths = 0
+    End If
+    rs.Close
+    
+    getTimeRequirementForCurrentRank = iMonths
+End Function
+
+Function getStudentIdFromName(studentName As String) As Integer
+    Dim sSQL As String
+    Dim rs As Recordset
+    Dim dbs As Database
+    Set dbs = CurrentDb
+
+    sSQL = "SELECT s.[studentID] FROM Students AS s WHERE s.[studentName] = '" & studentName & "';"
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+
+    If (rs.RecordCount > 0) Then
+        rs.MoveFirst
+        getStudentIdFromName = rs.Fields(0)
+    Else
+        getStudentIdFromName = "error"
+    End If
+End Function
+
+Function getStudentRankFromName(studentName As String) As String
+    Dim sSQL As String
+    Dim rs As Recordset
+    Dim dbs As Database
+    Set dbs = CurrentDb
+
+    sSQL = "SELECT s.[currentRank] FROM Students AS s WHERE s.[studentName] = '" & studentName & "';"
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+
+    If (rs.RecordCount > 0) Then
+        rs.MoveFirst
+        getStudentRankFromName = rs.Fields(0)
+    Else
+        getStudentRankFromName = "error"
+    End If
+End Function
