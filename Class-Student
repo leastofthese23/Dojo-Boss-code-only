@@ -1,0 +1,110 @@
+Option Compare Database
+
+'define all the variables
+Public id As Integer
+Public name As String
+Public phoneNumber As String
+Public email As String
+Public rank As String
+Public promotionDate As String
+Public monthsInRank As Integer
+Public monthlyRate As Single
+Public pictureFileName As String
+Public paymentStatus As String
+Public comments As String
+Public gender As String
+Public address As String
+Public city As String
+Public state As String
+Public zipCode As String
+Public DOB As String
+Public outsideTraining As String
+Public medicalIssues As String
+Public parentName As String
+Public smsEmail As String
+Public mobileCarrier As String
+Public active As Boolean
+
+
+
+
+    
+    
+
+
+Public Sub displayValues()
+    Dim s As String
+    
+    s = "id: " & id & vbCrLf & _
+        "name: " & name & vbCrLf & _
+        "phoneNumber: " & phoneNumber & vbCrLf & _
+        "email: " & email & vbCrLf & _
+        "rank: " & rank & vbCrLf & _
+        "promotionDate: " & promotionDate & vbCrLf & _
+        "monthsInRank: " & monthsInRank & vbCrLf & _
+        "monthlyRate: " & monthlyRate & vbCrLf & _
+        "pictureFileName: " & pictureFileName & vbCrLf & _
+        "paymentStatus: " & paymentStatus & vbCrLf & _
+        "comments: " & comments & vbCrLf & _
+        "gender: " & gender & vbCrLf & _
+        "address: " & address & vbCrLf & _
+        "city: " & city & vbCrLf & _
+        "state: " & state & vbCrLf & _
+        "zipCode: " & zipCode & vbCrLf & _
+        "DOB: " & DOB & vbCrLf & _
+        "outsideTraining: " & outsideTraining & vbCrLf & _
+        "medicalIssues: " & medicalIssues & vbCrLf & _
+        "parentName: " & parentName & vbCrLf & _
+        "smsEmail: " & smsEmail & vbCrLf & _
+        "mobileCarrier: " & mobileCarrier & vbCrLf & _
+        "active: " & active
+        
+    MsgBox s
+    
+End Sub
+
+
+Public Sub GetStudentInfo(Optional ByVal sName As String, Optional ByVal id As Integer) 'gets student's data from DB, sets all properties
+On Error Resume Next 'this is needed in case a null value is encountered in the database. We can't do this: parentName = null
+    Dim dbs As Database
+    Dim rs As Recordset
+    Dim sSQL As String
+    Set dbs = CurrentDb
+    
+    If (sName = "") Then
+        sSQL = "SELECT * FROM Students as s WHERE s.[studentID] = " & id
+    Else
+        sSQL = "SELECT * FROM Students as s WHERE s.[studentName] = '" & sName & "'"
+    End If
+    
+    Set rs = dbs.OpenRecordset(sSQL, dbOpenDynaset)
+    If rs.RecordCount > 0 Then
+        rs.MoveFirst
+        id = rs.Fields(0)
+        name = rs.Fields(1)
+        phoneNumber = rs.Fields(2)
+        email = rs.Fields(3)
+        rank = rs.Fields(4)
+        promotionDate = rs.Fields(5)
+        monthsInRank = rs.Fields(6)
+        monthlyRate = rs.Fields(7)
+        pictureFileName = rs.Fields(8)
+        paymentStatus = rs.Fields(9)
+        comments = rs.Fields(10)
+        gender = rs.Fields(11)
+        address = rs.Fields(12)
+        city = rs.Fields(13)
+        state = rs.Fields(14)
+        zipCode = rs.Fields(15)
+        DOB = rs.Fields(16)
+        outsideTraining = rs.Fields(17)
+        medicalIssues = rs.Fields(18)
+        parentName = rs.Fields(19)
+        smsEmail = rs.Fields(20)
+        mobileCarrier = rs.Fields(21)
+        active = rs.Fields(22)
+    Else
+        name = "error"
+    End If
+
+End Sub
