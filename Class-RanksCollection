@@ -1,0 +1,45 @@
+Option Compare Database
+
+Public rank As String
+Private ranksRankReqNames As Dictionary
+
+Private Sub Class_Initialize()
+    'Dim ranksRankReqNames As Dictionary
+    
+    rank = "10th kyu - white"
+    Set ranksRankReqNames = New Dictionary
+    
+    ranksRankReqNames.Add "10th kyu - white", "10th kyu white belt - promote to 9th kyu"
+    ranksRankReqNames.Add "9th kyu - blue I", "9th kyu blue I - promote to 8th kyu"
+    ranksRankReqNames.Add "8th kyu - blue II", "8th kyu blue II - promote to 7th kyu"
+    ranksRankReqNames.Add "7th kyu - blue III", "7th kyu blue III - promote to 6th kyu"
+    ranksRankReqNames.Add "6th kyu - green I", "6th kyu green I - promote to 5th kyu"
+    ranksRankReqNames.Add "5th kyu - green II", "5th kyu green II - promote to 4th kyu"
+    ranksRankReqNames.Add "4th kyu - green III", "4th kyu green III - promote to 3rd kyu"
+    ranksRankReqNames.Add "3rd kyu - brown I", "3rd kyu brown I - promote to 2nd kyu"
+    ranksRankReqNames.Add "2nd kyu - brown II", "2nd kyu brown II - promote to 1st kyu"
+    ranksRankReqNames.Add "1st kyu - brown III", "1st kyu brown III - promote to Shodan"
+    ranksRankReqNames.Add "Shodan - black I", "Shodan black I - promote to Nidan"
+    ranksRankReqNames.Add "Nidan - black II", "Nidan black II - promote to Sondan"
+    ranksRankReqNames.Add "Sandan - black III", "Sondan black III - promote to Yondan"
+    ranksRankReqNames.Add "Yandan - black IV", "Yondan black IV - promote to Godan"
+    ranksRankReqNames.Add "Godan - black V", "Godan black V - promote to Rokudan"
+    ranksRankReqNames.Add "Rokudan - black VI", "Rokudan black VI - promote to Nanadan"
+    ranksRankReqNames.Add "Shichidan - black VII", "Shichidan black VII - promote to Hachidan"
+    ranksRankReqNames.Add "Hachidan - black VIII", "Hachidan - black VIII - promote to Kudan"
+    ranksRankReqNames.Add "Kudan - black IX", "Kudan - black IX - promote to Chuch Norris"
+End Sub
+
+
+Function getNextRank(Optional ByVal sCurrentRank As String) As String
+    Dim i As Integer
+    For i = 0 To ranksRankReqNames.Count - 1
+        If (ranksRankReqNames.Keys(i) = sCurrentRank) Then
+            getNextRank = ranksRankReqNames.items(i + 1)
+        End If
+    Next i
+End Function
+
+Function convertRankToRankReq(currentRank As String) 'takes the variable currentRank, sets the variable currentRank
+    convertRankToRankReq = ranksRankReqNames(currentRank)
+End Function
