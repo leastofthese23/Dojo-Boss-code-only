@@ -1,0 +1,96 @@
+Option Compare Database
+
+Dim sCaption, sFilePath As String
+
+Dim imgBytes() As Byte
+
+Private Sub btnDone_Click()
+   On Error Resume Next
+    
+    imgBytes = Me.inititalsCapture.Ink.Save(IPF_GIF)
+    sCaption = ""
+    sCaption = Me.lblSignature.Caption
+    
+    If (UBound(imgBytes) = 0) Then
+        MsgBox ("Please enter your initials")
+    ElseIf (sCaption = "Initials part 1") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 2") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 3") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 4") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 5") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 6") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 7") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 8") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    ElseIf (sCaption = "Initials part 9") Then
+        sFilePath = (Application.CurrentProject.Path & "\images\system\signatures\" & "Initials part 1")
+        Call writeImageToFile 'takes the variables (sFile, imgBytes), writes image to file at given path
+        Call returnToCallingForm 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+    End If
+    
+    
+End Sub
+
+Function writeImageToFile() 'takes the variables (sFile, imgBytes), writes image to file at given path
+    Open sFilePath For Binary Access Write As #1
+    Put #1, 1, imgBytes
+    Close #1
+End Function
+
+Function returnToCallingForm() 'opens the calling form and inserts the initials in the corresponding box. Takes the variables (sCaption, sFilePath)
+
+    DoCmd.OpenForm FormName:="WaiverOfLiability"
+
+    If (sCaption = "Initials part 1") Then
+        Forms!WaiverOfLiability!initials1.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 2") Then
+        Forms!WaiverOfLiability!initials2.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 3") Then
+        Forms!WaiverOfLiability!initials3.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 4") Then
+        Forms!WaiverOfLiability!initials4.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 5") Then
+        Forms!WaiverOfLiability!initials5.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 6") Then
+        Forms!WaiverOfLiability!initials6.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 7") Then
+        Forms!WaiverOfLiability!initials7.Picture = sFilePath
+    ElseIf (sCaption = "Initials part 8") Then
+        Forms!WaiverOfLiability!initials8.Picture = sFilePath
+    Else
+        Forms!WaiverOfLiability!initials9.Picture = sFilePath
+    End If
+
+    Forms!WaiverOfLiability!txtDate = Date
+    
+    DoCmd.Close acForm, Me.Form.Name
+    
+End Function
+Private Sub btnRedoSignature_Click()
+    Me.inititalsCapture.Ink.DeleteStrokes
+    Me.Refresh
+End Sub
+
